@@ -98,10 +98,5 @@ namespace NetduinoCore
             NDLogger.Log(e.Exception.StackTrace, LogLevel.Verbose);
             NDLogger.Log("MQTT cloud platform restarting", LogLevel.Verbose);
         }
-
-        public void SocketError()
-        {
-            NDLogger.Log("Unknown socket error!", LogLevel.Error);
-        }
     }
 }
