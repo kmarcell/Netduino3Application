@@ -63,7 +63,6 @@ namespace Xbee
         public event BytesReadFromSerialEventHandler BytesReadFromSerial;
 
         private SerialPort serialPort;
-        private static byte XBEE_START_BYTE = 0x7E;
         private static int XBEE_LENGTH_BYTE_INDEX = 1;
         private byte[] rx_buffer;
 
@@ -193,11 +192,19 @@ namespace Xbee
 
         private NextFrame nextFrameFromBuffer(byte[] buffer, int startIndex)
         {
-            if (startIndex < 0 || startIndex >= buffer.Length || buffer.Length < 3) { return new NextFrame(); }
+            int nBytesStartByte = 1;
+            int nBytesFrameLength = 2;
+            int nBytesFrameChecksum = 1;
 
-            UInt16 length = ByteOperations.littleEndianWordFromBytes(buffer[startIndex + XBEE_LENGTH_BYTE_INDEX], buffer[startIndex + XBEE_LENGTH_BYTE_INDEX + 1]);
-            int frameLength = 3 + length + 1;
-            if (buffer.Length < 3 + length + 1) { return new NextFrame(); }
+            if (startIndex < 0 || startIndex >= buffer.Length || buffer.Length < (nBytesStartByte + nBytesFrameLength)) {
+                return new NextFrame();
+            }
+
+            UInt16 dataLength = ByteOperations.littleEndianWordFromBytes(buffer[startIndex + XBEE_LENGTH_BYTE_INDEX], buffer[startIndex + XBEE_LENGTH_BYTE_INDEX + 1]);
+            int frameLength = nBytesStartByte + nBytesFrameLength + dataLength + nBytesFrameChecksum; // 7E + [msbLength, lsbLength] + [data] + [checksum]
+            if (buffer.Length < frameLength) { 
+                return new NextFrame();
+            }
 
             byte[] bytes = new byte[frameLength];
             Array.Copy(buffer, startIndex, bytes, 0, frameLength);

@@ -4,10 +4,33 @@ using System.Net.Sockets;
 using System.Threading;
 
 using Microsoft.SPOT;
+using Microsoft.SPOT.Net;
+
+using Microsoft.SPOT.Hardware;
+using SecretLabs.NETMF.Hardware;
+using SecretLabs.NETMF.Hardware.Netduino;
+
 using Netduino_MQTT_Client_Library;
 
 namespace CloudLib
 {
+    public class ListenerThreadExceptionEventArgs : EventArgs
+    {
+        private Exception exception;
+
+        public ListenerThreadExceptionEventArgs(Exception exception)
+        {
+            this.exception = exception;
+        }
+
+        public Exception Exception
+        {
+            get { return this.exception; }
+        }
+    }
+
+    public delegate void ListenerThreadExceptionEventHandler(object sender, ListenerThreadExceptionEventArgs e);
+
     class MQTTCloudPlatform : ICloudPlatform
     {
         private Socket socket;
@@ -20,22 +43,19 @@ namespace CloudLib
         protected string userName;
         protected string password;
         protected int port;
+        protected bool isConnected;
 
         protected string clientID;
 
         public delegate string TopicFromEventTypeHandler(int eventType);
         public TopicFromEventTypeHandler TopicFromEventType;
+        public event ListenerThreadExceptionEventHandler ListenerThreadException;
 
         ~MQTTCloudPlatform()
         {
             if (listenerThread != null)
             {
                 listenerThread.Abort();
-            }
-            
-            if (socket != null)
-            {
-                socket.Close();
             }
         }
 
@@ -48,72 +68,86 @@ namespace CloudLib
             this.clientID = clientID;
         }
 
+        public bool IsConnected
+        {
+            get
+            {
+                return isConnected;
+            }
+        }
+
         public virtual int Connect(IPHostEntry host, string userName, string password, int port = 1883)
         {
-
             if (host == null || userName == null || password == null)
             {
                 return Constants.CONNECTION_ERROR;
             }
-
-            socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-            bool success = TryConnect(socket, new IPEndPoint(host.AddressList[0], port));
+            
             this.userName = userName;
             this.password = password;
             this.host = host;
             this.port = port;
 
-            if (!success)
-            {
-                socket.Close();
-                socket = null;
-                SocketError();
-                return Constants.CONNECTION_ERROR;
-            }
-
-            int returnCode = NetduinoMQTT.ConnectMQTT(socket, clientID, 20, true, userName, password);
-            if (returnCode != Constants.SUCCESS)
-            {
-                return returnCode;
-            }
-
-            Timer pingTimer = new Timer(new TimerCallback(PingServer), null, 1000, 10000);
-
-            // Setup and start a new thread for the listener
-            listenerThread = new Thread(mylistenerThread);
-            listenerThread.Start();
-
-            return 0;
-        }
-
-        public virtual void SocketError() { }
-
-        bool TryConnect(Socket s, EndPoint ep)
-        {
-            bool connected = false;
             new Thread(delegate
             {
                 try
                 {
-                    s.Connect(ep);
-                    connected = true;
+                    Connect();
                 }
-                catch { }
-
+                catch
+                {
+                }
             }).Start();
 
-            int checks = 10;
-            while (checks-- > 0 && connected == false)
+            int checks = 50;
+            while (checks-- > 0 && !IsConnected)
             {
                 Thread.Sleep(100);
             }
-            
-            return connected;
+
+            return IsConnected ? Constants.SUCCESS : Constants.CONNECTION_ERROR;
+        }
+
+        public void StartListen()
+        {
+            try
+            {
+                listenerThread = new Thread(mylistenerThread);
+                listenerThread.Start();
+            }
+            catch (Exception e)
+            {
+                onListenerThreadException(new ListenerThreadExceptionEventArgs(e));
+            }
+        }
+
+        public void StopListen()
+        {
+            try
+            {
+                listenerThread.Abort();
+            }
+            catch (ThreadAbortException)
+            {
+
+            }
+        }
+
+        private void Connect()
+        {
+            socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+            socket.Connect(new IPEndPoint(host.AddressList[0], port));
+            NetduinoMQTT.ConnectMQTT(socket, clientID, 20, true, userName, password);
+            Timer pingTimer = new Timer(new TimerCallback(PingServer), null, 1000, 10000);
+            isConnected = true;
         }
 
         public int Disconnect()
         {
             int returnCode = 0;
+            isConnected = false;
+
+            StopListen();
             try
             {
                 returnCode = NetduinoMQTT.DisconnectMQTT(socket);
@@ -143,7 +177,7 @@ namespace CloudLib
 
         public int PostEvent(CLEvent e)
         {
-            if (listenerThread == null) { return 1; }
+            if (!IsConnected) { return Constants.CONNECTION_ERROR; }
 
             string topic = TopicFromEventType(e.EventType);
             string message = e.serialize();
@@ -169,24 +203,31 @@ namespace CloudLib
         // So we should live forever.
         private void PingServer(object o)
         {
-            NetduinoMQTT.PingMQTT(socket);
+            if (IsConnected)
+            {
+                NetduinoMQTT.PingMQTT(socket);
+            }
         }
 
-        // The thread that listens for inbound messages
         private void mylistenerThread()
         {
             try
             {
                 NetduinoMQTT.listen(socket);
             }
-            catch (Exception e)
+            catch (SocketException se)
             {
-                ListenerThreadException(e);
-                Disconnect();
-                Connect(host, userName, password, port);
+                onListenerThreadException(new ListenerThreadExceptionEventArgs(se));
             }
         }
 
-        public virtual void ListenerThreadException(Exception e) { }
+        private void onListenerThreadException(ListenerThreadExceptionEventArgs e)
+        {
+            ListenerThreadExceptionEventHandler handler = ListenerThreadException;
+            if (handler != null)
+            {
+                handler(this, e);
+            }
+        }
     }
 }

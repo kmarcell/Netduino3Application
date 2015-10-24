@@ -50,7 +50,6 @@ namespace NetduinoCore
                 catch (Exception e)
                 {
                     NDLogger.Log("Broadcast exception " + e.Message, LogLevel.Error);
-                    startBroadcast(broadcastAddress);
                 }
             });
 

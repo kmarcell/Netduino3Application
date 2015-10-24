@@ -30,6 +30,7 @@ namespace CoreCommunication
                     break;
 
                 default:
+                    Debug.Print("Received unknown frame type: " + frameType);
                     break;
             }
 
@@ -52,13 +53,14 @@ namespace CoreCommunication
             {
                 frame.DigitalSampleData = digitalSampleDataFromBytes(bytes[FRAME_DIGITAL_SAMPLE_BYTE_INDEX], bytes[FRAME_DIGITAL_SAMPLE_BYTE_INDEX + 1]);
 
-                UInt16 sample = ByteOperations.littleEndianWordFromBytes(bytes[FRAME_ANALOG_SAMPLE_BYTE_INDEX], bytes[FRAME_ANALOG_SAMPLE_BYTE_INDEX + 1]);
-                frame.AnalogSampleData = new UInt16[] { sample };
+                UInt16[] analogSamples = nAnalogSamplesFromBytes(FRAME_ANALOG_SAMPLE_BYTE_INDEX, frame.AnalogChannels.Length, bytes);
+                frame.AnalogSampleData = analogSamples;
             }
-            else
+            else if (frame.AnalogChannels.Length > 0)
             {
-                UInt16 sample = ByteOperations.littleEndianWordFromBytes(bytes[FRAME_DIGITAL_SAMPLE_BYTE_INDEX], bytes[FRAME_DIGITAL_SAMPLE_BYTE_INDEX + 1]);
-                frame.AnalogSampleData = new UInt16[]{ sample };
+                // If no digital samples are present, analog sample data is at the digital sample index
+                UInt16[] analogSamples = nAnalogSamplesFromBytes(FRAME_DIGITAL_SAMPLE_BYTE_INDEX, frame.AnalogChannels.Length, bytes);
+                frame.AnalogSampleData = analogSamples;
             }
 
             return frame;
@@ -81,7 +83,14 @@ namespace CoreCommunication
             }
 
             byte[] channels = new byte[activeChannels];
-            Array.Copy(channels, digitalChannels, activeChannels);
+            int lastIndex = 0;
+            for (int i = 0; i < digitalChannels.Length; ++i)
+            {
+                if (digitalChannels[i] > 0)
+                {
+                    channels[lastIndex++] = digitalChannels[i];
+                }
+            }
             return channels;
         }
 
@@ -102,7 +111,13 @@ namespace CoreCommunication
             }
 
             byte[] channels = new byte[activeChannels];
-            Array.Copy(channels, analogChannels, activeChannels);
+            int lastIndex = 0;
+            for (int i = 0; i < analogChannels.Length; ++i)
+            {
+                if (analogChannels[i] > 0) {
+                    channels[lastIndex++] = analogChannels[i];
+                }
+            }
             return channels;
         }
 
@@ -117,6 +132,21 @@ namespace CoreCommunication
             }
 
             return digitalSampleData;
+        }
+
+        private static UInt16[] nAnalogSamplesFromBytes(int startIndex, int numberOfAnalogSamples, byte[] bytes)
+        {
+            UInt16[] analogSampleData = new UInt16[numberOfAnalogSamples];
+
+            for (int i = 0; i < numberOfAnalogSamples; i++)
+            {
+                byte msb = bytes[startIndex + (i * 2)];
+                byte lsb = bytes[startIndex + (i * 2) + 1];
+                UInt16 sample = ByteOperations.littleEndianWordFromBytes(msb, lsb);
+                analogSampleData[i] = sample;
+            }
+
+            return analogSampleData;
         }
     }
 }

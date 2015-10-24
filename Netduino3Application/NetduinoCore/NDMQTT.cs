@@ -13,6 +13,7 @@ namespace NetduinoCore
         {
             this.TopicFromEventType = topicFromEventType;
             this.clientID = ClientID;
+            this.ListenerThreadException += ListenerExceptionHandler;
         }
 
         private string topicFromEventType(int type)
@@ -91,17 +92,15 @@ namespace NetduinoCore
             return returnCode;
         }
 
-        public override void ListenerThreadException(Exception e)
+        public void ListenerExceptionHandler(object sender, ListenerThreadExceptionEventArgs e)
         {
-            base.ListenerThreadException(e);
-            NDLogger.Log("MQTT cloud platform listener error: " + e.Message, LogLevel.Error);
-            NDLogger.Log(e.StackTrace, LogLevel.Verbose);
+            NDLogger.Log("MQTT cloud platform listener error: " + e.Exception.Message, LogLevel.Error);
+            NDLogger.Log(e.Exception.StackTrace, LogLevel.Verbose);
             NDLogger.Log("MQTT cloud platform restarting", LogLevel.Verbose);
         }
 
-        public override void SocketError()
+        public void SocketError()
         {
-            base.SocketError();
             NDLogger.Log("Unknown socket error!", LogLevel.Error);
         }
     }

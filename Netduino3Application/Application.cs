@@ -19,7 +19,7 @@ namespace Netduino3Application
     class Application : IApplication
     {
         private XbeeDevice xbeeCoordinator;
-        private MQTTCloudPlatform upstreamMQTT;
+        private NDMQTT upstreamMQTT;
         private OutputPort onboardLED;
         private InterruptPort onboardButton;
 
@@ -53,6 +53,9 @@ namespace Netduino3Application
             xbeeCoordinator.FrameDroppedByChecksum += new FrameDroppedByChecksumEventHandler(FrameDroppedByChecksumHandler);
             xbeeCoordinator.ReceivedRemoteFrame += new ReceivedRemoteFrameEventHandler(ReceivedRemoteFrameHandler);
 
+            upstreamMQTT = new NDMQTT();
+            startMQTT();
+
             // setup our interrupt port (on-board button)
             onboardButton = new InterruptPort((Cpu.Pin)0x15, false, Port.ResistorMode.Disabled, Port.InterruptMode.InterruptEdgeHigh);
 
@@ -75,7 +78,7 @@ namespace Netduino3Application
         // the interrupt handler for the button
         void button_OnInterrupt(uint data1, uint data2, DateTime time)
         {
-            if (upstreamMQTT != null)
+            if (upstreamMQTT.IsConnected)
             {
                 try
                 {
@@ -83,6 +86,7 @@ namespace Netduino3Application
                 }
                 catch
                 {
+                    NDLogger.Log("MQTT unsubscribe exception!", LogLevel.Verbose);
                 }
 
                 upstreamMQTT.Disconnect();
@@ -97,6 +101,7 @@ namespace Netduino3Application
                 }
                 catch
                 {
+                    NDLogger.Log("MQTT start exception!", LogLevel.Verbose);
                 }
             }
         }
@@ -108,13 +113,11 @@ namespace Netduino3Application
             {
                 hostEntry = Dns.GetHostEntry(Configuration.MQTT.HostName);
             }
-            catch (SocketException se)
+            catch (Exception e)
             {
-                NDLogger.Log("Unable to get host entry by DNS error: " + se, LogLevel.Error);
+                NDLogger.Log("Unable to get host entry by DNS error: " + e, LogLevel.Error);
                 return;
             }
-
-            upstreamMQTT = new NDMQTT();
 
             int returnCode = upstreamMQTT.Connect(hostEntry, Configuration.MQTT.UserName, Configuration.MQTT.Password, Configuration.MQTT.HostPort);
 
@@ -129,6 +132,7 @@ namespace Netduino3Application
             }
 
             upstreamMQTT.SubscribeToEvents(new int[] { 0 }, new String[] { Configuration.MQTT.SensorDataTopic });
+            upstreamMQTT.StartListen();
         }
 
         public NDConfiguration Configuration
@@ -147,6 +151,12 @@ namespace Netduino3Application
             {
                 upstreamMQTT.PostEvent(new CLEvent((int)CLEventType.CLTemperatureReadingEventType, temperatureCelsius));
             }
+
+            analogSample = 1023.0 - frame.AnalogSampleData[1];
+            double ambientLightPercent = (analogSample / 1023.0) * 100.0;
+            double lux = (analogSample / 1023.0) * 1200.0;
+            NDLogger.Log("Ambient light percent " + ambientLightPercent + "% Lux: " + lux, LogLevel.Info);
+            
         }
 
         void FrameDroppedByChecksumHandler(object sender, FrameDroppedByChecksumEventArgs e)

@@ -44,15 +44,7 @@ namespace Netduino3Application
         static void waitForNetworkSetUp()
         {
             NetworkInterface NI = NetworkInterface.GetAllNetworkInterfaces()[0];
-            if (!NI.IsDhcpEnabled)
-            {
-                NI.EnableDhcp();
-            }
-
-            while (IPAddress.GetDefaultLocalAddress() == IPAddress.Any)
-            {
-                Thread.Sleep(5000);
-            }
+            while (IPAddress.GetDefaultLocalAddress() == IPAddress.Any) ;
         }
 
         static void setupBroadcast()
