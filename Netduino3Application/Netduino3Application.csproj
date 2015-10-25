@@ -35,6 +35,7 @@
     <Compile Include="Application.cs" />
     <Compile Include="CloudLib\CloudPlatform.cs" />
     <Compile Include="CloudLib\MQTTCloudPlatform.cs" />
+    <Compile Include="CoreCommunication\CommandSerializer.cs" />
     <Compile Include="NetduinoCore\MQTTLogger.cs" />
     <Compile Include="CloudLib\MQTT\NetduinoMQTT.cs" />
     <Compile Include="CoreCommunication\ByteOperations.cs" />
@@ -49,6 +50,7 @@
     <Compile Include="NetduinoCore\NDSockets.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Program.cs" />
+    <Compile Include="CoreCommunication\CommandBuilder.cs" />
     <Compile Include="Xbee\XbeeDevice.cs" />
     <Compile Include="Xbee\XbeeDiscoveryService.cs" />
   </ItemGroup>
