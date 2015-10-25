@@ -30,11 +30,12 @@ namespace CoreCommunication
     public class Frame
     {
         public FrameType type;
+        public byte FrameID;
+        public int variableDataLength;
     }
 
     public class DIOADCRx16IndicatorFrame : Frame
     {
-        public byte FrameID;
         public UInt16 SourceAddress;
         public byte RSSI;
         public PacketOption Options;
@@ -42,5 +43,15 @@ namespace CoreCommunication
         public byte[] AnalogChannels;
         public byte[] DigitalSampleData;
         public UInt16[] AnalogSampleData;
+    }
+
+    public class RemoteATCommandRequestFrame : Frame
+    {
+        public byte[] DestinationAddress16Bit;
+        public byte[] DestinationAddress64Bit;
+        public bool RequestResponse;
+        public byte CommandOptions;
+        public string ATCommandName;
+        public byte[] ATCommandData;
     }
 }

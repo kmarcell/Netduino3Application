@@ -3,38 +3,7 @@ using Microsoft.SPOT;
 
 namespace CoreCommunication
 {
-    class Command
-    {
-        public bool RequestResponse;
-        private byte[] data;
-
-        public Command(byte[] data)
-        {
-            this.data = data;
-        }
-
-        public byte[] ByteArrayValue
-        {
-            get { return data; }
-        }
-
-        public byte FrameID
-        {
-            get
-            {
-                return data.Length >= 5 ? data[4] : (byte)0;
-            }
-            set
-            {
-                if (data.Length >= 5)
-                {
-                    data[4] = value;
-                }
-            }
-        }
-    }
-
-    class CommandBuilder
+    class FrameBuilder
     {
         // Private variables
         private FrameType frameType;
@@ -82,53 +51,73 @@ namespace CoreCommunication
         }
 
         // Constructor
-        public CommandBuilder(FrameType frameType)
+        public FrameBuilder(FrameType frameType)
         {
             this.frameType = frameType;
             setDefaultValues();
         }
 
         // Builder methods
-        public Command Build()
+        public Frame Build()
         {
-            Command cmd = new Command(CommandSerializer.Serialize(this));
-            cmd.RequestResponse = requestResponse;
-            return cmd;
+            Frame frame = null;
+            switch (frameType)
+            {
+                case FrameType.RemoteATCommand:
+                {
+                    RemoteATCommandRequestFrame _frame = new RemoteATCommandRequestFrame();
+                    _frame.type = FrameType;
+                    _frame.variableDataLength = ATCommandData.Length;
+                    _frame.DestinationAddress16Bit = destinationAddress16Bit;
+                    _frame.DestinationAddress64Bit = destinationAddress64Bit;
+                    _frame.RequestResponse = requestResponse;
+                    _frame.CommandOptions = CmdOptions;
+                    _frame.ATCommandName = ATCommandName;
+                    _frame.ATCommandData = ATCommandData;
+
+                    frame = _frame;
+                } break;
+
+                default:
+                    break;
+            }
+
+            return frame;
         }
-        
-        public CommandBuilder setDestinationAddress16Bit(UInt16 destinationAddress)
+
+        public FrameBuilder setDestinationAddress16Bit(UInt16 destinationAddress)
         {
             destinationAddress16Bit = ByteOperations.littleEndianBytesFromWord(destinationAddress);
             return this;
         }
-        public CommandBuilder setDestinationAddress16Bit(byte[] destinationAddress)
+        public FrameBuilder setDestinationAddress16Bit(byte[] destinationAddress)
         {
             destinationAddress16Bit = destinationAddress;
             return this;
         }
 
-        public CommandBuilder setRequestResponse(bool shouldRequestResponse)
+        public FrameBuilder setRequestResponse(bool shouldRequestResponse)
         {
             requestResponse = shouldRequestResponse;
             return this;
         }
 
-        public CommandBuilder setATCommandName(string commandName)
+        public FrameBuilder setATCommandName(string commandName)
         {
             this.commandName = commandName;
             return this;
         }
 
-        public CommandBuilder setATCommandData(byte[] commmandData)
+        public FrameBuilder setATCommandData(byte[] commmandData)
         {
             this.commandData = commmandData;
             return this;
         }
 
         //! Allows for module parameter registers on a remote device to be queried or set.
-        public static CommandBuilder RemoteATCommandRequest()
+        public static FrameBuilder RemoteATCommandRequest()
         {
-            return new CommandBuilder(FrameType.RemoteATCommand);
+            return new FrameBuilder(FrameType.RemoteATCommand);
         }
 
         // Private methods
