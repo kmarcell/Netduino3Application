@@ -63,29 +63,25 @@ namespace Xbee
         public event BytesReadFromSerialEventHandler BytesReadFromSerial;
 
         private SerialPort serialPort;
-        private static int XBEE_LENGTH_BYTE_INDEX = 1;
-        private byte[] rx_buffer;
+        private ByteBuffer rx_buffer;
 
         public XbeeDevice(SerialPort serialPort)
         {
             this.serialPort = serialPort;
             this.serialPort.Open();
             this.serialPort.DataReceived += new SerialDataReceivedEventHandler(DataReceivedHandler);
-            this.rx_buffer = new byte[0];
+            this.rx_buffer = new ByteBuffer();
         }
 
-        protected struct NextFrame
+        private void WriteFrame(Frame frame)
         {
-            public bool HasValue;
-            public int EndIndex;
-            public byte[] RawBytes;
+            byte[] rawFrame = FrameSerializer.Serialize(frame);
+            this.serialPort.Write(rawFrame, 0, rawFrame.Length);
+        }
 
-            public NextFrame(byte[] bytes, int startIndex)
-            {
-                this.HasValue = true;
-                this.EndIndex = startIndex + bytes.Length;
-                this.RawBytes = bytes;
-            }
+        public void EnqueueFrame(Frame frame)
+        {
+
         }
 
         private void DataReceivedHandler(object sender, SerialDataReceivedEventArgs e)
@@ -97,38 +93,30 @@ namespace Xbee
             if (nBytes > 0)
             {
                 // Merge RxBuffer and incoming bytes to buffer
-                byte[] bytes = readBytesFromSerial(this.serialPort, nBytes);
-                byte[] buffer = new byte[this.rx_buffer.Length + bytes.Length];
-                System.Array.Copy(this.rx_buffer, buffer, this.rx_buffer.Length);
-                System.Array.Copy(bytes, 0, buffer, this.rx_buffer.Length, bytes.Length);
-                this.rx_buffer = new byte[0];
+                byte[] bytes = readBytesFromSerial(serialPort, nBytes);
+                rx_buffer.AddBytes(bytes);
 
                 // Slice and Parse frames
                 int index = 0;
-                NextFrame rawFrame = nextFrameFromBuffer(buffer, index);
-                while (rawFrame.HasValue)
+                byte[] rawFrame = FrameSlicer.nextFrameFromBuffer(rx_buffer.RawBytes, index);
+                while (rawFrame.Length > 0)
                 {
                     handleRawFrameRead(rawFrame);
 
-                    index = rawFrame.EndIndex;
-                    rawFrame = nextFrameFromBuffer(buffer, index);
+                    index += rawFrame.Length;
+                    rawFrame = FrameSlicer.nextFrameFromBuffer(rx_buffer.RawBytes, index);
                 }
 
                 // Save partial last Frame
-                int remainingBytes = buffer.Length - index;
-                if (remainingBytes > 0)
-                {
-                    this.rx_buffer = new byte[remainingBytes];
-                    Array.Copy(buffer, index, this.rx_buffer, 0, remainingBytes);
-                }
+                rx_buffer.RemoveFirstNBytes(index);
             }
         }
 
-        private void handleRawFrameRead(NextFrame rawFrame)
+        private void handleRawFrameRead(byte[] rawFrame)
         {
-            if (isValidChecksum(rawFrame.RawBytes))
+            if (isValidChecksum(rawFrame))
             {
-                Frame frame = FrameParser.FrameFromRawBytes(rawFrame.RawBytes);
+                Frame frame = FrameParser.FrameFromRawBytes(rawFrame);
                 if (frame != null)
                 {
                     OnRecievedFrame(new ReceivedRemoteFrameEventArgs(frame));
@@ -136,9 +124,8 @@ namespace Xbee
             }
             else
             {
-                OnFrameDropped(new FrameDroppedByChecksumEventArgs(rawFrame.RawBytes));
+                OnFrameDropped(new FrameDroppedByChecksumEventArgs(rawFrame));
             }
-
         }
 
         private void OnRecievedFrame(ReceivedRemoteFrameEventArgs e)
@@ -188,27 +175,6 @@ namespace Xbee
             }
 
             return rawFrame[checksumIndex] == 0xFF - (sum & 0xFF);
-        }
-
-        private NextFrame nextFrameFromBuffer(byte[] buffer, int startIndex)
-        {
-            int nBytesStartByte = 1;
-            int nBytesFrameLength = 2;
-            int nBytesFrameChecksum = 1;
-
-            if (startIndex < 0 || startIndex >= buffer.Length || buffer.Length < (nBytesStartByte + nBytesFrameLength)) {
-                return new NextFrame();
-            }
-
-            UInt16 dataLength = ByteOperations.littleEndianWordFromBytes(buffer[startIndex + XBEE_LENGTH_BYTE_INDEX], buffer[startIndex + XBEE_LENGTH_BYTE_INDEX + 1]);
-            int frameLength = nBytesStartByte + nBytesFrameLength + dataLength + nBytesFrameChecksum; // 7E + [msbLength, lsbLength] + [data] + [checksum]
-            if (buffer.Length < frameLength) { 
-                return new NextFrame();
-            }
-
-            byte[] bytes = new byte[frameLength];
-            Array.Copy(buffer, startIndex, bytes, 0, frameLength);
-            return new NextFrame(bytes, startIndex);
         }
     }
 }
