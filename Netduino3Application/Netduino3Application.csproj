@@ -36,6 +36,8 @@
     <Compile Include="CloudLib\CloudPlatform.cs" />
     <Compile Include="CloudLib\MQTTCloudPlatform.cs" />
     <Compile Include="CoreCommunication\ByteBuffer.cs" />
+    <Compile Include="CoreCommunication\FrameQueue.cs" />
+    <Compile Include="CoreCommunication\FrameQueueService.cs" />
     <Compile Include="CoreCommunication\FrameSerializer.cs" />
     <Compile Include="CoreCommunication\FrameSlicer.cs" />
     <Compile Include="NetduinoCore\MQTTLogger.cs" />

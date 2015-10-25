@@ -9,7 +9,6 @@ namespace CoreCommunication
         private FrameType frameType;
         private byte[] destinationAddress16Bit;
         private byte[] destinationAddress64Bit;
-        private bool requestResponse;
         private byte CmdOptions = 0x01; // Apply changes on remote device. NOTE: If this bit is not set, an AC (or WR+FR) command must be sent before changes will take effect.
         private string commandName;
         private byte[] commandData;
@@ -28,11 +27,6 @@ namespace CoreCommunication
         public byte[] DestinationAddress64Bit
         {
             get { return destinationAddress64Bit; }
-        }
-
-        public bool RequestResponse
-        {
-            get { return requestResponse; }
         }
 
         public byte CommandOptions
@@ -70,7 +64,6 @@ namespace CoreCommunication
                     _frame.variableDataLength = ATCommandData.Length;
                     _frame.DestinationAddress16Bit = destinationAddress16Bit;
                     _frame.DestinationAddress64Bit = destinationAddress64Bit;
-                    _frame.RequestResponse = requestResponse;
                     _frame.CommandOptions = CmdOptions;
                     _frame.ATCommandName = ATCommandName;
                     _frame.ATCommandData = ATCommandData;
@@ -96,12 +89,6 @@ namespace CoreCommunication
             return this;
         }
 
-        public FrameBuilder setRequestResponse(bool shouldRequestResponse)
-        {
-            requestResponse = shouldRequestResponse;
-            return this;
-        }
-
         public FrameBuilder setATCommandName(string commandName)
         {
             this.commandName = commandName;
@@ -114,10 +101,18 @@ namespace CoreCommunication
             return this;
         }
 
-        //! Allows for module parameter registers on a remote device to be queried or set.
-        public static FrameBuilder RemoteATCommandRequest()
+        // Helpers
+
+        public FrameBuilder setBroadcastAddress()
         {
-            return new FrameBuilder(FrameType.RemoteATCommand);
+            setDestinationAddressDefaultValues();
+            return this;
+        }
+
+        //! Allows for module parameter registers on a remote device to be queried or set.
+        public static FrameBuilder RemoteATCommandRequest
+        {
+            get { return new FrameBuilder(FrameType.RemoteATCommand); }
         }
 
         // Private methods

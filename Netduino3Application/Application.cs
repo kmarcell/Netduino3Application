@@ -12,6 +12,7 @@ using SecretLabs.NETMF.Hardware.Netduino;
 
 using CloudLib;
 using NetduinoCore;
+using CoreCommunication;
 using Xbee;
 
 namespace Netduino3Application
@@ -140,10 +141,10 @@ namespace Netduino3Application
             get { return NDConfiguration.DefaultConfiguration; }
         }
 
-        void ReceivedRemoteFrameHandler(object sender, ReceivedRemoteFrameEventArgs e)
+        private bool isOn = true;
+        void ReceivedRemoteFrameHandler(object sender, Frame frame)
         {
-            CoreCommunication.DIOADCRx16IndicatorFrame frame = (CoreCommunication.DIOADCRx16IndicatorFrame)e.Frame;
-            double analogSample = frame.AnalogSampleData[0];
+            double analogSample = (frame as DIOADCRx16IndicatorFrame).AnalogSampleData[0];
             double temperatureCelsius = ((analogSample / 1023.0 * 3.3) - 0.5) * 100.0;
             NDLogger.Log("Temperature " + temperatureCelsius + " Celsius" + " sample " + analogSample, LogLevel.Info);
 
@@ -152,10 +153,17 @@ namespace Netduino3Application
                 upstreamMQTT.PostEvent(new CLEvent((int)CLEventType.CLTemperatureReadingEventType, temperatureCelsius));
             }
 
-            analogSample = 1023.0 - frame.AnalogSampleData[1];
+            analogSample = 1023.0 - (frame as DIOADCRx16IndicatorFrame).AnalogSampleData[1];
             double ambientLightPercent = (analogSample / 1023.0) * 100.0;
             double lux = (analogSample / 1023.0) * 1200.0;
             NDLogger.Log("Ambient light percent " + ambientLightPercent + "% Lux: " + lux, LogLevel.Info);
+
+            Frame turnOnD5 = FrameBuilder.RemoteATCommandRequest
+                                            .setATCommandName("D5")
+                                            .setATCommandData(new byte[] { isOn ? (byte)4 : (byte)5 })
+                                            .setBroadcastAddress()
+                                            .Build();
+                                            
             
         }
 

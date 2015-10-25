@@ -27,11 +27,23 @@ namespace CoreCommunication
         PacketRecievedOnBroadcastPAN = 0x04,
     }
 
-    public class Frame
+    public class Frame : Object
     {
         public FrameType type;
         public byte FrameID;
         public int variableDataLength;
+
+        public static bool isEqualAddress(byte[] a, byte[] b)
+        {
+            if (a.Length != b.Length) { return false; }
+
+            for (int i = 0; i < a.Length; ++i)
+            {
+                if (a[i] != b[i]) { return false; }
+            }
+
+            return true;
+        }
     }
 
     public class DIOADCRx16IndicatorFrame : Frame
@@ -45,13 +57,45 @@ namespace CoreCommunication
         public UInt16[] AnalogSampleData;
     }
 
-    public class RemoteATCommandRequestFrame : Frame
+    public class RemoteATCommandFrame : Frame
     {
-        public byte[] DestinationAddress16Bit;
-        public byte[] DestinationAddress64Bit;
-        public bool RequestResponse;
-        public byte CommandOptions;
+        public byte[] Address16Bit;
+        public byte[] Address64Bit;
         public string ATCommandName;
         public byte[] ATCommandData;
+    }
+
+    public class RemoteATCommandRequestFrame : RemoteATCommandFrame
+    {
+        public byte CommandOptions;
+
+        public byte[] DestinationAddress16Bit 
+        {
+            get { return Address16Bit; }
+            set { Address16Bit = value; }
+        }
+
+        public byte[] DestinationAddress64Bit
+        {
+            get { return Address64Bit; }
+            set { Address64Bit = value; }
+        }
+    }
+
+    public class RemoteATCommandResponseFrame : RemoteATCommandFrame
+    {
+        public byte RemStatus;
+
+        public byte[] SourceAddress16Bit
+        {
+            get { return Address16Bit; }
+            set { Address16Bit = value; }
+        }
+
+        public byte[] SourceAddress64Bit
+        {
+            get { return Address64Bit; }
+            set { Address64Bit = value; }
+        }
     }
 }

@@ -5,22 +5,7 @@ using CoreCommunication;
 
 namespace Xbee
 {
-    public class ReceivedRemoteFrameEventArgs : EventArgs
-    {
-        private Frame frame;
-
-        public ReceivedRemoteFrameEventArgs(Frame frame)
-        {
-            this.frame = frame;
-        }
-
-        public Frame Frame
-        {
-            get { return this.frame; }
-        }
-    }
-
-    public delegate void ReceivedRemoteFrameEventHandler(object sender, ReceivedRemoteFrameEventArgs e);
+    public delegate void ReceivedRemoteFrameEventHandler(object sender, Frame frame);
 
     public class FrameDroppedByChecksumEventArgs : EventArgs
     {
@@ -64,13 +49,17 @@ namespace Xbee
 
         private SerialPort serialPort;
         private ByteBuffer rx_buffer;
+        private FrameQueueService RequestResponseService;
 
         public XbeeDevice(SerialPort serialPort)
         {
             this.serialPort = serialPort;
             this.serialPort.Open();
             this.serialPort.DataReceived += new SerialDataReceivedEventHandler(DataReceivedHandler);
-            this.rx_buffer = new ByteBuffer();
+            rx_buffer = new ByteBuffer();
+            RequestResponseService = new FrameQueueService();
+            ReceivedRemoteFrame += RequestResponseService.onReceivedRemoteFrame;
+            RequestResponseService.SendFrame += WriteFrame;
         }
 
         private void WriteFrame(Frame frame)
@@ -79,9 +68,9 @@ namespace Xbee
             this.serialPort.Write(rawFrame, 0, rawFrame.Length);
         }
 
-        public void EnqueueFrame(Frame frame)
+        public void EnqueueFrame(Frame frame, Callback callback)
         {
-
+            RequestResponseService.EnqueueFrame(frame, callback);
         }
 
         private void DataReceivedHandler(object sender, SerialDataReceivedEventArgs e)
@@ -119,7 +108,7 @@ namespace Xbee
                 Frame frame = FrameParser.FrameFromRawBytes(rawFrame);
                 if (frame != null)
                 {
-                    OnRecievedFrame(new ReceivedRemoteFrameEventArgs(frame));
+                    OnRecievedFrame(frame);
                 }
             }
             else
@@ -128,12 +117,12 @@ namespace Xbee
             }
         }
 
-        private void OnRecievedFrame(ReceivedRemoteFrameEventArgs e)
+        private void OnRecievedFrame(Frame frame)
         {
             ReceivedRemoteFrameEventHandler handler = ReceivedRemoteFrame;
             if (handler != null)
             {
-                handler(this, e);
+                handler(this, frame);
             }
         }
 
