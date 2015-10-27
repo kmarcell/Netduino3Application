@@ -9,7 +9,7 @@ namespace CoreCommunication
         private FrameType frameType;
         private byte[] destinationAddress16Bit;
         private byte[] destinationAddress64Bit;
-        private byte CmdOptions = 0x01; // Apply changes on remote device. NOTE: If this bit is not set, an AC (or WR+FR) command must be sent before changes will take effect.
+        private byte CmdOptions = 0x02; // Bit 1: Apply changes on remote device. NOTE: If this bit is not set, an AC (or WR+FR) command must be sent before changes will take effect.
         private string commandName;
         private byte[] commandData;
 

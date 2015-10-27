@@ -4,9 +4,15 @@ using Microsoft.SPOT;
 
 namespace CoreCommunication
 {
-    class Queue<T> : IEnumerable
+    class Queue
     {
-        private T[] queue;
+        private class FrameWithHandler
+        {
+            public Frame frame;
+            public Callback callback;
+        }
+
+        private FrameWithHandler[] queue;
         private int count;
 
         public int Count
@@ -16,47 +22,58 @@ namespace CoreCommunication
 
         public Queue(int capacity = 16)
         {
-            queue = new T[capacity];
+            queue = new FrameWithHandler[capacity];
         }
 
-        public void Enqueue(T element)
+        public void Enqueue(Frame frame, Callback callback)
         {
             if (count == queue.Length)
             {
                 expandQueue();
             }
 
-            queue[count] = element;
+            queue[count] = new FrameWithHandler { frame = frame, callback = callback };
             count++;
         }
 
-        public T this[int index]
+        public Frame this[int index]
         {
-            get { return queue[index]; }
+            get { return queue[index].frame; }
         }
 
-        public T RemoveAt(int index)
+        public Callback CallbackForFrameAtIndex(int index)
+        {
+            if (index < 0 || index >= Count) { return null; }
+            return queue[index].callback;
+        }
+
+        public delegate bool Test(Frame frame);
+        public int IndexOfFramePassingTest(Test test)
+        {
+            for (int i = 0; i < Count; ++i)
+            {
+                if (test(queue[i].frame)) { return i; }
+            }
+
+            return -1;
+        }
+
+        public void RemoveAt(int index)
         {
             if (index < 0 || index > queue.Length)
             {
-                return default(T);
+                return;
             }
 
-            T element = queue[index];
+            FrameWithHandler element = queue[index];
             --count;
             Array.Copy(queue, index + 1, queue, index, Count - index);
-            queue[Count] = default(T);
-
-            return element;
-        }
-        public IEnumerator GetEnumerator()
-        {
-            return queue.GetEnumerator();
+            queue[Count] = null;
         }
 
         private void expandQueue()
         {
-            T[] tmp_queue = new T[queue.Length * 2];
+            FrameWithHandler[] tmp_queue = new FrameWithHandler[queue.Length * 2];
             Array.Copy(queue, tmp_queue, queue.Length);
             queue = tmp_queue;
         }

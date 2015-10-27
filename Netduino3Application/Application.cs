@@ -66,11 +66,7 @@ namespace Netduino3Application
 
         private SerialPort createSerialPortWithName(string name)
         {
-            SerialPort port = new SerialPort(name, 9600);
-            port.Parity = Parity.None;
-            port.Parity = Parity.None;
-            port.StopBits = StopBits.One;
-            port.DataBits = 8;
+            SerialPort port = new SerialPort(name, 9600, Parity.None, 8, StopBits.One);
             port.Handshake = Handshake.None;
 
             return port;
@@ -158,13 +154,16 @@ namespace Netduino3Application
             double lux = (analogSample / 1023.0) * 1200.0;
             NDLogger.Log("Ambient light percent " + ambientLightPercent + "% Lux: " + lux, LogLevel.Info);
 
-            Frame turnOnD5 = FrameBuilder.RemoteATCommandRequest
-                                            .setATCommandName("D5")
-                                            .setATCommandData(new byte[] { isOn ? (byte)4 : (byte)5 })
+            isOn = !isOn;
+            Frame toggleD5 = FrameBuilder.RemoteATCommandRequest
+                                            .setATCommandName("D4")
+                                            .setATCommandData(new byte[] { isOn ? (byte)5 : (byte)4 })
                                             .setBroadcastAddress()
                                             .Build();
-                                            
-            
+
+            xbeeCoordinator.EnqueueFrame(toggleD5, delegate(Frame response) {
+                NDLogger.Log("Got response");
+            });
         }
 
         void FrameDroppedByChecksumHandler(object sender, FrameDroppedByChecksumEventArgs e)

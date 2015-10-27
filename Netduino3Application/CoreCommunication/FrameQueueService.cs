@@ -11,19 +11,13 @@ namespace CoreCommunication
         public static int NOTFOUND = -1;
         public event SendFrameEventHandler SendFrame;
 
-        private struct FrameWithHandler
-        {
-            public Frame frame;
-            public Callback callback;
-        }
-
-        private Queue<FrameWithHandler> waitingForResponseQueue;
-        private Queue<FrameWithHandler> waitingForSendingQueue;
+        private Queue waitingForResponseQueue;
+        private Queue waitingForSendingQueue;
 
         public FrameQueueService()
         {
-            waitingForResponseQueue = new Queue<FrameWithHandler>();
-            waitingForSendingQueue = new Queue<FrameWithHandler>();
+            waitingForResponseQueue = new Queue();
+            waitingForSendingQueue = new Queue();
         }
 
         public void EnqueueFrame(Frame frame, Callback callback)
@@ -31,14 +25,14 @@ namespace CoreCommunication
             int frameID = UnusedFrameId;
             if (frameID == NOTFOUND)
             {
-                waitingForSendingQueue.Enqueue(new FrameWithHandler { frame = frame , callback = callback });
+                waitingForSendingQueue.Enqueue(frame, callback);
                 return;
             }
 
             if (callback != null)
             {
                 frame.FrameID = (byte)frameID;
-                waitingForResponseQueue.Enqueue(new FrameWithHandler { frame = frame, callback = callback });
+                waitingForResponseQueue.Enqueue(frame, callback);
             }
             else
             {
@@ -50,36 +44,31 @@ namespace CoreCommunication
 
         public void onReceivedRemoteFrame(object sender, Frame frame)
         {
-            ResponseReceived(frame);
+            if (frame is RemoteATCommandResponseFrame)
+            {
+                ResponseReceived(frame);
+            }
         }
 
         public void ResponseReceived(Frame response)
         {
-            int i = 0;
-            foreach (FrameWithHandler element in waitingForResponseQueue)
-            {
-                Frame f = element.frame;
-                if (f.FrameID == response.FrameID)
-                {
-                    if (!(response is RemoteATCommandResponseFrame) || isResponseForRequest(response, f))
-                    {
-                        if (element.callback != null)
-                        {
-                            element.callback(response);
-                        }
-                        break;
-                    }
-                }
-                ++i;
-            }
+            int index = waitingForResponseQueue.IndexOfFramePassingTest(delegate(Frame frame) {
+                return (frame.FrameID == response.FrameID) && isResponseForRequest(response, frame);
+            });
 
-            waitingForResponseQueue.RemoveAt(i);
+            if (index == NOTFOUND) { return; }
+
+            Callback callback = waitingForResponseQueue.CallbackForFrameAtIndex(index);
+            if (callback != null)
+            {
+                callback(response);
+            }
+            waitingForResponseQueue.RemoveAt(index);
         }
 
         private bool isResponseForRequest(Frame response, Frame request)
         {
-            return response is RemoteATCommandResponseFrame &&
-                request is RemoteATCommandRequestFrame &&
+            return request is RemoteATCommandRequestFrame &&
                 (Frame.isEqualAddress((request as RemoteATCommandRequestFrame).DestinationAddress16Bit, (response as RemoteATCommandResponseFrame).SourceAddress16Bit) ||
                 (Frame.isEqualAddress((request as RemoteATCommandRequestFrame).DestinationAddress16Bit, new byte[] { 0xFF, 0xFE }) &&
                 Frame.isEqualAddress((request as RemoteATCommandRequestFrame).DestinationAddress64Bit, (response as RemoteATCommandResponseFrame).SourceAddress64Bit)));
@@ -96,16 +85,8 @@ namespace CoreCommunication
 
                 for (int frameId = 1; frameId < 256; ++frameId)
                 {
-                    bool used = false;
-                    foreach (Frame f in waitingForResponseQueue)
-                    {
-                        if (frameId == f.FrameID)
-                        {
-                            used = true;
-                        }
-                    }
-
-                    if (!used) { return frameId; }
+                    int index = waitingForResponseQueue.IndexOfFramePassingTest(delegate(Frame frame) { return frameId == frame.FrameID; });
+                    if (index == NOTFOUND) { return frameId; }
                 }
 
                 return NOTFOUND;

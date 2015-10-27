@@ -56,15 +56,27 @@ namespace Xbee
             this.serialPort = serialPort;
             this.serialPort.Open();
             this.serialPort.DataReceived += new SerialDataReceivedEventHandler(DataReceivedHandler);
+            this.serialPort.ErrorReceived += new SerialErrorReceivedEventHandler(ErrorReceivedHandler);
             rx_buffer = new ByteBuffer();
             RequestResponseService = new FrameQueueService();
             ReceivedRemoteFrame += RequestResponseService.onReceivedRemoteFrame;
             RequestResponseService.SendFrame += WriteFrame;
         }
 
+        private bool isOn = true;
         private void WriteFrame(Frame frame)
         {
+            isOn = !isOn;
             byte[] rawFrame = FrameSerializer.Serialize(frame);
+            if (isOn)
+            {
+                rawFrame = new byte[] { 0x7E, 0x00, 0x10, 0x17, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0xFF, 0xFE, 0x02, 0x44, 0x34, 0x05, 0x6B };
+            }
+            else
+            {
+                rawFrame = new byte[] { 0x7E, 0x00, 0x10, 0x17, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0xFF, 0xFE, 0x02, 0x44, 0x34, 0x04, 0x6c };
+            }
+
             this.serialPort.Write(rawFrame, 0, rawFrame.Length);
         }
 
@@ -99,6 +111,11 @@ namespace Xbee
                 // Save partial last Frame
                 rx_buffer.RemoveFirstNBytes(index);
             }
+        }
+
+        private void ErrorReceivedHandler(object sender, SerialErrorReceivedEventArgs e)
+        {
+            Debug.Print("Serial error received with type: " + e.EventType);
         }
 
         private void handleRawFrameRead(byte[] rawFrame)

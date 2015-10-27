@@ -22,7 +22,7 @@ namespace CoreCommunication
             bytes[1] = ByteOperations.littleEndianBytesFromWord(length)[0];
             bytes[2] = ByteOperations.littleEndianBytesFromWord(length)[1];
             bytes[3] = (byte)frame.type;
-            bytes[4] = 0x00; // FrameID, this should be set by the host to match with a subsequent response
+            bytes[4] = frame.FrameID;
 
             switch (frame.type)
             {
