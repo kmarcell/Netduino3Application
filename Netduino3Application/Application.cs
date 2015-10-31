@@ -48,7 +48,7 @@ namespace Netduino3Application
             NetworkInterface NI = NetworkInterface.GetAllNetworkInterfaces()[0];
             NDLogger.Log("Network IP " + NI.IPAddress.ToString(), LogLevel.Verbose);
 
-            xbeeCoordinator = new XbeeDevice(createSerialPortWithName("COM1"));
+            xbeeCoordinator = new XbeeDevice(createSerialPortWithName(SerialPorts.COM1));
 
             xbeeCoordinator.BytesReadFromSerial += new BytesReadFromSerialEventHandler(BytesReadFromSerialHandler);
             xbeeCoordinator.FrameDroppedByChecksum += new FrameDroppedByChecksumEventHandler(FrameDroppedByChecksumHandler);
@@ -137,10 +137,9 @@ namespace Netduino3Application
             get { return NDConfiguration.DefaultConfiguration; }
         }
 
-        private bool isOn = true;
         void ReceivedRemoteFrameHandler(object sender, Frame frame)
         {
-            double analogSample = (frame as DIOADCRx16IndicatorFrame).AnalogSampleData[0];
+            double analogSample = (frame as DigitalAnalogSampleFrame).AnalogSampleData[0];
             double temperatureCelsius = ((analogSample / 1023.0 * 3.3) - 0.5) * 100.0;
             NDLogger.Log("Temperature " + temperatureCelsius + " Celsius" + " sample " + analogSample, LogLevel.Info);
 
@@ -149,21 +148,10 @@ namespace Netduino3Application
                 upstreamMQTT.PostEvent(new CLEvent((int)CLEventType.CLTemperatureReadingEventType, temperatureCelsius));
             }
 
-            analogSample = 1023.0 - (frame as DIOADCRx16IndicatorFrame).AnalogSampleData[1];
+            analogSample = 1023.0 - (frame as DigitalAnalogSampleFrame).AnalogSampleData[1];
             double ambientLightPercent = (analogSample / 1023.0) * 100.0;
             double lux = (analogSample / 1023.0) * 1200.0;
             NDLogger.Log("Ambient light percent " + ambientLightPercent + "% Lux: " + lux, LogLevel.Info);
-
-            isOn = !isOn;
-            Frame toggleD5 = FrameBuilder.RemoteATCommandRequest
-                                            .setATCommandName("D4")
-                                            .setATCommandData(new byte[] { isOn ? (byte)5 : (byte)4 })
-                                            .setBroadcastAddress()
-                                            .Build();
-
-            xbeeCoordinator.EnqueueFrame(toggleD5, delegate(Frame response) {
-                NDLogger.Log("Got response");
-            });
         }
 
         void FrameDroppedByChecksumHandler(object sender, FrameDroppedByChecksumEventArgs e)

@@ -9,7 +9,7 @@ namespace CoreCommunication
         private FrameType frameType;
         private byte[] destinationAddress16Bit;
         private byte[] destinationAddress64Bit;
-        private byte CmdOptions = 0x02; // Bit 1: Apply changes on remote device. NOTE: If this bit is not set, an AC (or WR+FR) command must be sent before changes will take effect.
+        private RemoteATCommandOptions CmdOptions = RemoteATCommandOptions.ApplyChanges; // Bit 1: Apply changes on remote device. NOTE: If this bit is not set, an AC (or WR+FR) command must be sent before changes will take effect.
         private string commandName;
         private byte[] commandData;
 
@@ -29,7 +29,7 @@ namespace CoreCommunication
             get { return destinationAddress64Bit; }
         }
 
-        public byte CommandOptions
+        public RemoteATCommandOptions CommandOptions
         {
             get { return CmdOptions; }
         }
@@ -86,6 +86,17 @@ namespace CoreCommunication
         public FrameBuilder setDestinationAddress16Bit(byte[] destinationAddress)
         {
             destinationAddress16Bit = destinationAddress;
+            return this;
+        }
+
+        public FrameBuilder setDestinationAddress64Bit(UInt64 destinationAddress)
+        {
+            destinationAddress64Bit = ByteOperations.littleEndianBytesFromLong(destinationAddress);
+            return this;
+        }
+        public FrameBuilder setDestinationAddress64Bit(byte[] destinationAddress)
+        {
+            destinationAddress64Bit = destinationAddress;
             return this;
         }
 

@@ -17,5 +17,15 @@ namespace CoreCommunication
             byte lsb = (byte)(word & 0x00FF);
             return new byte[] {msb, lsb};
         }
+
+        public static byte[] littleEndianBytesFromLong(UInt64 var)
+        {
+            byte[] bytes = new byte[8];
+            for (int i = 0; i < 8; ++i)
+            {
+                bytes[i] = (byte)((var >> (i * 8)) & 0xFF);
+            }
+            return bytes;
+        }
     }
 }

@@ -3,6 +3,11 @@ using Microsoft.SPOT;
 using System.IO.Ports;
 using CoreCommunication;
 
+using SecretLabs.NETMF.Hardware;
+using SecretLabs.NETMF.Hardware.Netduino;
+
+using System.Threading;
+
 namespace Xbee
 {
     public delegate void ReceivedRemoteFrameEventHandler(object sender, Frame frame);
@@ -63,21 +68,12 @@ namespace Xbee
             RequestResponseService.SendFrame += WriteFrame;
         }
 
-        private bool isOn = true;
         private void WriteFrame(Frame frame)
         {
-            isOn = !isOn;
             byte[] rawFrame = FrameSerializer.Serialize(frame);
-            if (isOn)
-            {
-                rawFrame = new byte[] { 0x7E, 0x00, 0x10, 0x17, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0xFF, 0xFE, 0x02, 0x44, 0x34, 0x05, 0x6B };
-            }
-            else
-            {
-                rawFrame = new byte[] { 0x7E, 0x00, 0x10, 0x17, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0xFF, 0xFE, 0x02, 0x44, 0x34, 0x04, 0x6c };
-            }
 
-            this.serialPort.Write(rawFrame, 0, rawFrame.Length);
+            serialPort.Write(rawFrame, 0, rawFrame.Length);
+            serialPort.Flush();
         }
 
         public void EnqueueFrame(Frame frame, Callback callback)

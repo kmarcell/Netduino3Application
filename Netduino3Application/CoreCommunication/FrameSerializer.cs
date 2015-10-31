@@ -44,7 +44,7 @@ namespace CoreCommunication
             }
             bytes[13] = frame.DestinationAddress16Bit[0];
             bytes[14] = frame.DestinationAddress16Bit[1];
-            bytes[15] = frame.CommandOptions;
+            bytes[15] = (byte)frame.CommandOptions;
             byte[] commandName = Encoding.UTF8.GetBytes(frame.ATCommandName);
             bytes[16] = commandName[0];
             bytes[17] = commandName[1];
@@ -66,7 +66,7 @@ namespace CoreCommunication
         private byte checksum(byte[] bytes)
         {
             int sum = 0;
-            for (int i = 0; i<bytes.Length-1; ++i)
+            for (int i = 3; i<bytes.Length-1; ++i)
             {
                 sum += bytes[i];
             }

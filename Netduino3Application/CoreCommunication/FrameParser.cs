@@ -7,12 +7,6 @@ namespace CoreCommunication
     {
         public static int FRAME_TYPE_BYTE_INDEX = 3;
         public static int FRAME_ID_BYTE_INDEX = 4;
-        public static int FRAME_SOURCE_ADDRESS_BYTE_INDEX = 5;
-        public static int FRAME_RSSI_BYTE_INDEX = 7;
-        public static int FRAME_OPTIONS_BYTE_INDEX = 8;
-        public static int FRAME_CHANNELS_BYTE_INDEX = 9;
-        public static int FRAME_DIGITAL_SAMPLE_BYTE_INDEX = 11;
-        public static int FRAME_ANALOG_SAMPLE_BYTE_INDEX = 13;
 
         public static int NUMBER_OF_DIGITAL_CHANNELS = 9;
         public static int NUMBER_OF_ANALOG_CHANNELS = 6;
@@ -29,6 +23,10 @@ namespace CoreCommunication
                     frame = DIOADCRx16IndicatorFrameFromRawBytes(bytes); 
                     break;
 
+                case FrameType.DIOADCRx64Indicator:
+                    frame = DIOADCRx64IndicatorFrameFromRawBytes(bytes);
+                    break;
+
                 default:
                     Debug.Print("Received unknown frame type: " + frameType);
                     break;
@@ -37,18 +35,46 @@ namespace CoreCommunication
             return frame;
         }
 
-        private static DIOADCRx16IndicatorFrame DIOADCRx16IndicatorFrameFromRawBytes(byte[] bytes)
+        private static DigitalAnalogSampleFrame DIOADCRx16IndicatorFrameFromRawBytes(byte[] bytes)
         {
-            if (bytes.Length <= FRAME_ANALOG_SAMPLE_BYTE_INDEX) { return null; }
+            DigitalAnalogSampleFrame frame = DigitalAnalogSampleFrameFromRawBytes(bytes, 2);
+            if (frame != null)
+            {
+                frame.SourceAddress16Bit = new byte[2];
+                Array.Copy(bytes, 5, frame.SourceAddress16Bit, 0, 2);
+            }
+            return frame;
+        }
 
-            DIOADCRx16IndicatorFrame frame = new DIOADCRx16IndicatorFrame();
+        private static DigitalAnalogSampleFrame DIOADCRx64IndicatorFrameFromRawBytes(byte[] bytes)
+        {
+            DigitalAnalogSampleFrame frame = DigitalAnalogSampleFrameFromRawBytes(bytes, 8);
+            if (frame != null)
+            {
+                frame.SourceAddress64Bit = new byte[8];
+                Array.Copy(bytes, 5, frame.SourceAddress64Bit, 0, 8);
+            }
+            return frame;
+        }
+
+        private static DigitalAnalogSampleFrame DigitalAnalogSampleFrameFromRawBytes(byte[] bytes, int sourceAdderssLength)
+        {
+            int FRAME_RSSI_BYTE_INDEX = 5 + sourceAdderssLength;
+            int FRAME_OPTIONS_BYTE_INDEX = FRAME_RSSI_BYTE_INDEX + 1;
+            int FRAME_CHANNELS_BYTE_INDEX = FRAME_OPTIONS_BYTE_INDEX + 1;
+            int FRAME_DIGITAL_SAMPLE_BYTE_INDEX = FRAME_CHANNELS_BYTE_INDEX + 2;
+            int FRAME_ANALOG_SAMPLE_BYTE_INDEX = FRAME_DIGITAL_SAMPLE_BYTE_INDEX + 2;
+
+            if (bytes.Length <= FRAME_DIGITAL_SAMPLE_BYTE_INDEX) { return null; }
+
+            DigitalAnalogSampleFrame frame = new DigitalAnalogSampleFrame();
             frame.FrameID = bytes[FRAME_ID_BYTE_INDEX];
-            frame.SourceAddress = ByteOperations.littleEndianWordFromBytes(bytes[FRAME_SOURCE_ADDRESS_BYTE_INDEX], bytes[FRAME_SOURCE_ADDRESS_BYTE_INDEX + 1]);
             frame.RSSI = bytes[FRAME_RSSI_BYTE_INDEX];
-            frame.Options = (PacketOption)bytes[FRAME_OPTIONS_BYTE_INDEX];
+
+            frame.NumberOfAnalogSamples = bytes[FRAME_OPTIONS_BYTE_INDEX];
             frame.DigitalChannels = digitalChannelsFromBytes(bytes[FRAME_CHANNELS_BYTE_INDEX], bytes[FRAME_CHANNELS_BYTE_INDEX + 1]);
             frame.AnalogChannels = analogChannelsFromByte(bytes[FRAME_CHANNELS_BYTE_INDEX]);
-            
+
             if (frame.DigitalChannels.Length > 0)
             {
                 frame.DigitalSampleData = digitalSampleDataFromBytes(bytes[FRAME_DIGITAL_SAMPLE_BYTE_INDEX], bytes[FRAME_DIGITAL_SAMPLE_BYTE_INDEX + 1]);

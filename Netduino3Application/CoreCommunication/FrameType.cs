@@ -27,11 +27,19 @@ namespace CoreCommunication
         PacketRecievedOnBroadcastPAN = 0x04,
     }
 
-    public class Frame : Object
+    public enum RemoteATCommandOptions : byte
+    {
+        ApplyChanges = 0x02,
+    }
+
+    public abstract class Frame : Object
     {
         public FrameType type;
         public byte FrameID;
         public int variableDataLength;
+
+        protected byte[] Address16Bit;
+        protected byte[] Address64Bit;
 
         public static bool isEqualAddress(byte[] a, byte[] b)
         {
@@ -46,28 +54,37 @@ namespace CoreCommunication
         }
     }
 
-    public class DIOADCRx16IndicatorFrame : Frame
+    public class DigitalAnalogSampleFrame : Frame
     {
-        public UInt16 SourceAddress;
         public byte RSSI;
-        public PacketOption Options;
+        public int NumberOfAnalogSamples;
         public byte[] DigitalChannels;
         public byte[] AnalogChannels;
         public byte[] DigitalSampleData;
         public UInt16[] AnalogSampleData;
+
+        public byte[] SourceAddress16Bit
+        {
+            get { return Address16Bit; }
+            set { Address16Bit = value; }
+        }
+
+        public byte[] SourceAddress64Bit
+        {
+            get { return Address64Bit; }
+            set { Address64Bit = value; }
+        }
     }
 
     public class RemoteATCommandFrame : Frame
     {
-        public byte[] Address16Bit;
-        public byte[] Address64Bit;
         public string ATCommandName;
         public byte[] ATCommandData;
     }
 
     public class RemoteATCommandRequestFrame : RemoteATCommandFrame
     {
-        public byte CommandOptions;
+        public RemoteATCommandOptions CommandOptions;
 
         public byte[] DestinationAddress16Bit 
         {
