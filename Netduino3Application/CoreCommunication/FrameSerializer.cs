@@ -29,11 +29,25 @@ namespace CoreCommunication
                 case FrameType.RemoteATCommand:
                     setRemoteATCommandRequestValues(bytes, (RemoteATCommandRequestFrame)frame);
                     break;
+                case FrameType.ATCommand:
+                    setATCommandRequestValues(bytes, (ATCommandFrame)frame);
+                    break;
             }
 
             bytes[fixedLength + 3 + frame.variableDataLength] = checksum(bytes);
 
             return bytes;
+        }
+
+        private void setATCommandRequestValues(byte[] bytes, ATCommandFrame frame)
+        {
+            byte[] commandName = Encoding.UTF8.GetBytes(frame.ATCommandName);
+            bytes[5] = commandName[0];
+            bytes[6] = commandName[1];
+            if (frame.ATCommandData != null)
+            {
+                Array.Copy(frame.ATCommandData, 0, bytes, 7, frame.ATCommandData.Length);
+            }
         }
 
         private void setRemoteATCommandRequestValues(byte[] bytes, RemoteATCommandRequestFrame frame)
@@ -48,7 +62,7 @@ namespace CoreCommunication
             byte[] commandName = Encoding.UTF8.GetBytes(frame.ATCommandName);
             bytes[16] = commandName[0];
             bytes[17] = commandName[1];
-            System.Array.Copy(frame.ATCommandData, 0, bytes, 18, frame.ATCommandData.Length);
+            Array.Copy(frame.ATCommandData, 0, bytes, 18, frame.ATCommandData.Length);
         }
 
         private UInt16 fixedLengthWithFrameType(FrameType type)
@@ -58,6 +72,7 @@ namespace CoreCommunication
                 case FrameType.RemoteATCommand:
                     return 15;
 
+                case FrameType.ATCommand:
                 default:
                     return 4;
             }

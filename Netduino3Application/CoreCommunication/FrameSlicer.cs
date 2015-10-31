@@ -5,8 +5,6 @@ namespace CoreCommunication
 {
     class FrameSlicer
     {
-        private static int XBEE_LENGTH_BYTE_INDEX = 1;
-
         public static byte[] nextFrameFromBuffer(byte[] buffer, int offset)
         {
             int nBytesStartByte = 1;
@@ -18,7 +16,7 @@ namespace CoreCommunication
                 return new byte[] { };
             }
 
-            UInt16 dataLength = ByteOperations.littleEndianWordFromBytes(buffer[offset + XBEE_LENGTH_BYTE_INDEX], buffer[offset + XBEE_LENGTH_BYTE_INDEX + 1]);
+            UInt16 dataLength = ByteOperations.littleEndianWordFromBytes(buffer[offset + 1], buffer[offset + 2]);
             int frameLength = nBytesStartByte + nBytesFrameLength + dataLength + nBytesFrameChecksum; // 7E + [msbLength, lsbLength] + [data] + [checksum]
             if (buffer.Length < frameLength)
             {

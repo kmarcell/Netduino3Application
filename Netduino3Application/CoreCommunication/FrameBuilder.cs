@@ -12,6 +12,7 @@ namespace CoreCommunication
         private RemoteATCommandOptions CmdOptions = RemoteATCommandOptions.ApplyChanges; // Bit 1: Apply changes on remote device. NOTE: If this bit is not set, an AC (or WR+FR) command must be sent before changes will take effect.
         private string commandName;
         private byte[] commandData;
+        private CommandStatus commandStatus;
 
         // Public variables
         public FrameType FrameType
@@ -44,6 +45,11 @@ namespace CoreCommunication
             get { return commandData; }
         }
 
+        public CommandStatus CommandStatus
+        {
+            get { return commandStatus; }
+        }
+
         // Constructor
         public FrameBuilder(FrameType frameType)
         {
@@ -67,6 +73,29 @@ namespace CoreCommunication
                     _frame.CommandOptions = CmdOptions;
                     _frame.ATCommandName = ATCommandName;
                     _frame.ATCommandData = ATCommandData;
+
+                    frame = _frame;
+                } break;
+
+                case FrameType.ATCommand:
+                {
+                    ATCommandRequestFrame _frame = new ATCommandRequestFrame();
+                    _frame.type = FrameType;
+                    _frame.variableDataLength = ATCommandData == null ? 0 : ATCommandData.Length;
+                    _frame.ATCommandName = ATCommandName;
+                    _frame.ATCommandData = ATCommandData;
+
+                    frame = _frame;
+                } break;
+
+                case FrameType.ATCommandResponse:
+                {
+                    ATCommandResponseFrame _frame = new ATCommandResponseFrame();
+                    _frame.type = FrameType;
+                    _frame.variableDataLength = ATCommandData==null ? 0 : ATCommandData.Length;
+                    _frame.ATCommandName = ATCommandName;
+                    _frame.ATCommandData = ATCommandData;
+                    _frame.Status = commandStatus;
 
                     frame = _frame;
                 } break;
@@ -112,6 +141,12 @@ namespace CoreCommunication
             return this;
         }
 
+        public FrameBuilder setCommandStatus(CommandStatus status)
+        {
+            commandStatus = status;
+            return this;
+        }
+
         // Helpers
 
         public FrameBuilder setBroadcastAddress()
@@ -124,6 +159,21 @@ namespace CoreCommunication
         public static FrameBuilder RemoteATCommandRequest
         {
             get { return new FrameBuilder(FrameType.RemoteATCommand); }
+        }
+
+        public static FrameBuilder RemoteATCommandResponse
+        {
+            get { return new FrameBuilder(FrameType.RemoteCommandResponse); }
+        }
+
+        public static FrameBuilder ATCommandRequest
+        {
+            get { return new FrameBuilder(FrameType.ATCommand); }
+        }
+
+        public static FrameBuilder ATCommandResponse
+        {
+            get { return new FrameBuilder(FrameType.ATCommandResponse); }
         }
 
         // Private methods

@@ -8,7 +8,7 @@ using SecretLabs.NETMF.Hardware.Netduino;
 
 using System.Threading;
 
-namespace Xbee
+namespace XBee
 {
     public delegate void ReceivedRemoteFrameEventHandler(object sender, Frame frame);
 
@@ -46,7 +46,7 @@ namespace Xbee
 
     public delegate void BytesReadFromSerialEventHandler(object sender, BytesReadFromSerialEventArgs e);
 
-    class XbeeDevice
+    class XBeeCoordinator
     {
         public event ReceivedRemoteFrameEventHandler ReceivedRemoteFrame;
         public event FrameDroppedByChecksumEventHandler FrameDroppedByChecksum;
@@ -56,12 +56,13 @@ namespace Xbee
         private ByteBuffer rx_buffer;
         private FrameQueueService RequestResponseService;
 
-        public XbeeDevice(SerialPort serialPort)
+        public XBeeCoordinator(SerialPort serialPort)
         {
             this.serialPort = serialPort;
             this.serialPort.Open();
-            this.serialPort.DataReceived += new SerialDataReceivedEventHandler(DataReceivedHandler);
             this.serialPort.ErrorReceived += new SerialErrorReceivedEventHandler(ErrorReceivedHandler);
+            this.serialPort.DataReceived += new SerialDataReceivedEventHandler(DropIncomingBytes);
+
             rx_buffer = new ByteBuffer();
             RequestResponseService = new FrameQueueService();
             ReceivedRemoteFrame += RequestResponseService.onReceivedRemoteFrame;
@@ -79,6 +80,32 @@ namespace Xbee
         public void EnqueueFrame(Frame frame, Callback callback)
         {
             RequestResponseService.EnqueueFrame(frame, callback);
+        }
+
+        public void StartListen()
+        {
+            serialPort.DataReceived -= (SerialDataReceivedEventHandler)DropIncomingBytes;
+            serialPort.DataReceived += (SerialDataReceivedEventHandler)DataReceivedHandler;
+        }
+
+        public void StopListen()
+        {
+            serialPort.DataReceived -= (SerialDataReceivedEventHandler)DataReceivedHandler;
+            serialPort.DataReceived += (SerialDataReceivedEventHandler)DropIncomingBytes;
+        }
+
+        private void DropIncomingBytes(object sender, SerialDataReceivedEventArgs e)
+        {
+            SerialPort serialPort = (SerialPort)sender;
+            if (serialPort != this.serialPort) { return; }
+
+            if (serialPort != this.serialPort) { return; }
+
+            int nBytes = serialPort.BytesToRead;
+            if (nBytes > 0)
+            {
+                readBytesFromSerial(serialPort, nBytes);
+            }
         }
 
         private void DataReceivedHandler(object sender, SerialDataReceivedEventArgs e)

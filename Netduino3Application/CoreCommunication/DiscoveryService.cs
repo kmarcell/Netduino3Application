@@ -22,9 +22,7 @@ namespace CoreCommunication
 
     interface IDiscoveryService
     {
-        void scan();
-        void stopScan();
-
+        void Discover();
         event RemoteDeviceFoundEventHandler RemoteDeviceFound;
     }
 }

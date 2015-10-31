@@ -13,13 +13,13 @@ using SecretLabs.NETMF.Hardware.Netduino;
 using CloudLib;
 using NetduinoCore;
 using CoreCommunication;
-using Xbee;
+using XBee;
 
 namespace Netduino3Application
 {
     class Application : IApplication
     {
-        private XbeeDevice xbeeCoordinator;
+        private XBeeCoordinator xbeeCoordinator;
         private NDMQTT upstreamMQTT;
         private OutputPort onboardLED;
         private InterruptPort onboardButton;
@@ -48,11 +48,12 @@ namespace Netduino3Application
             NetworkInterface NI = NetworkInterface.GetAllNetworkInterfaces()[0];
             NDLogger.Log("Network IP " + NI.IPAddress.ToString(), LogLevel.Verbose);
 
-            xbeeCoordinator = new XbeeDevice(createSerialPortWithName(SerialPorts.COM1));
+            xbeeCoordinator = new XBeeCoordinator(createSerialPortWithName(SerialPorts.COM1));
 
             xbeeCoordinator.BytesReadFromSerial += new BytesReadFromSerialEventHandler(BytesReadFromSerialHandler);
             xbeeCoordinator.FrameDroppedByChecksum += new FrameDroppedByChecksumEventHandler(FrameDroppedByChecksumHandler);
             xbeeCoordinator.ReceivedRemoteFrame += new ReceivedRemoteFrameEventHandler(ReceivedRemoteFrameHandler);
+            xbeeCoordinator.StartListen();
 
             upstreamMQTT = new NDMQTT();
             startMQTT();
@@ -62,6 +63,12 @@ namespace Netduino3Application
 
             // assign our interrupt handler
             onboardButton.OnInterrupt += new NativeEventHandler(button_OnInterrupt);
+
+            XBeeDiscoveryService service = new XBeeDiscoveryService(xbeeCoordinator);
+            service.Discover(delegate(RemoteXBee[] knownDevices)
+            {
+                NDLogger.Log("Device count " + knownDevices.Length);
+            });
         }
 
         private SerialPort createSerialPortWithName(string name)
@@ -139,6 +146,8 @@ namespace Netduino3Application
 
         void ReceivedRemoteFrameHandler(object sender, Frame frame)
         {
+            if (!(frame is DigitalAnalogSampleFrame)) { return; }
+
             double analogSample = (frame as DigitalAnalogSampleFrame).AnalogSampleData[0];
             double temperatureCelsius = ((analogSample / 1023.0 * 3.3) - 0.5) * 100.0;
             NDLogger.Log("Temperature " + temperatureCelsius + " Celsius" + " sample " + analogSample, LogLevel.Info);
@@ -152,6 +161,7 @@ namespace Netduino3Application
             double ambientLightPercent = (analogSample / 1023.0) * 100.0;
             double lux = (analogSample / 1023.0) * 1200.0;
             NDLogger.Log("Ambient light percent " + ambientLightPercent + "% Lux: " + lux, LogLevel.Info);
+
         }
 
         void FrameDroppedByChecksumHandler(object sender, FrameDroppedByChecksumEventArgs e)

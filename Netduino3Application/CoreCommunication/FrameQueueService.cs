@@ -4,7 +4,8 @@ using Microsoft.SPOT;
 namespace CoreCommunication
 {
     public delegate void SendFrameEventHandler(Frame frame);
-    public delegate void Callback(Frame response);
+    // Returns YES, if expected response arrived, NO otherwise.
+    public delegate bool Callback(Frame response);
 
     class FrameQueueService
     {
@@ -44,7 +45,7 @@ namespace CoreCommunication
 
         public void onReceivedRemoteFrame(object sender, Frame frame)
         {
-            if (frame is RemoteATCommandResponseFrame)
+            if (frame is RemoteATCommandResponseFrame || frame is ATCommandResponseFrame)
             {
                 ResponseReceived(frame);
             }
@@ -59,19 +60,27 @@ namespace CoreCommunication
             if (index == NOTFOUND) { return; }
 
             Callback callback = waitingForResponseQueue.CallbackForFrameAtIndex(index);
-            if (callback != null)
+            if (callback != null && callback(response))
             {
-                callback(response);
+                waitingForResponseQueue.RemoveAt(index);
             }
-            waitingForResponseQueue.RemoveAt(index);
         }
 
         private bool isResponseForRequest(Frame response, Frame request)
         {
-            return request is RemoteATCommandRequestFrame &&
-                (Frame.isEqualAddress((request as RemoteATCommandRequestFrame).DestinationAddress16Bit, (response as RemoteATCommandResponseFrame).SourceAddress16Bit) ||
-                (Frame.isEqualAddress((request as RemoteATCommandRequestFrame).DestinationAddress16Bit, new byte[] { 0xFF, 0xFE }) &&
-                Frame.isEqualAddress((request as RemoteATCommandRequestFrame).DestinationAddress64Bit, (response as RemoteATCommandResponseFrame).SourceAddress64Bit)));
+            if (request is RemoteATCommandRequestFrame)
+            {
+                return (Frame.isEqualAddress((request as RemoteATCommandRequestFrame).DestinationAddress16Bit, new byte[] { 0xFF, 0xFE }) &&
+                    Frame.isEqualAddress((request as RemoteATCommandRequestFrame).DestinationAddress64Bit, (response as RemoteATCommandResponseFrame).SourceAddress64Bit)) ||
+                    Frame.isEqualAddress((request as RemoteATCommandRequestFrame).DestinationAddress16Bit, (response as RemoteATCommandResponseFrame).SourceAddress16Bit);
+            }
+
+            if (request is ATCommandRequestFrame)
+            {
+                return true;
+            }
+
+            return false;
 }
 
         public int UnusedFrameId

@@ -1,4 +1,5 @@
 using System;
+using System.Text;
 using Microsoft.SPOT;
 
 namespace CoreCommunication
@@ -30,6 +31,15 @@ namespace CoreCommunication
     public enum RemoteATCommandOptions : byte
     {
         ApplyChanges = 0x02,
+    }
+
+    public enum CommandStatus: byte
+    {
+        OK = 0x00,
+        Error = 0x01,
+        InvalidCommand = 0x02,
+        InvalidParameter = 0x03,
+        TxFailure = 0x04,
     }
 
     public abstract class Frame : Object
@@ -76,13 +86,95 @@ namespace CoreCommunication
         }
     }
 
-    public class RemoteATCommandFrame : Frame
+    public abstract class ATCommandFrame : Frame
     {
         public string ATCommandName;
         public byte[] ATCommandData;
     }
 
-    public class RemoteATCommandRequestFrame : RemoteATCommandFrame
+    public class ATCommandRequestFrame : ATCommandFrame
+    {
+
+    }
+
+    public class ATCommandResponseFrame : ATCommandFrame
+    {
+        public CommandStatus Status;
+    }
+
+    public class NetworkDiscoveryResponseFrame : ATCommandResponseFrame
+    {
+
+        public NetworkDiscoveryResponseFrame(ATCommandResponseFrame frame)
+        {
+            this.ATCommandName = frame.ATCommandName;
+            this.ATCommandData = frame.ATCommandData;
+            this.FrameID = frame.FrameID;
+            this.Status = frame.Status;
+            this.variableDataLength = frame.variableDataLength;
+            this.type = frame.type;
+        }
+       
+        public byte[] SourceAddress
+        {
+            get
+            {
+                if (ATCommandData == null || ATCommandData.Length < 2)
+                {
+                    return null;
+                }
+                
+                if (Address16Bit == null)
+                {
+                    Address16Bit = new byte[] { ATCommandData[0], ATCommandData[1] };
+                } 
+                return Address16Bit;
+            }
+        }
+
+        public byte[] SerialNumber
+        {
+            get 
+            {
+                if (ATCommandData == null || ATCommandData.Length < 10)
+                {
+                    return null;
+                }
+
+                if (Address64Bit == null)
+                {
+                    Address64Bit = new byte[8];
+                    Array.Copy(ATCommandData, 2, Address64Bit, 0, 8);
+                }
+                return Address64Bit;
+            }
+        }
+
+        public int RSSI
+        {
+            get
+            {
+                if (ATCommandData == null || ATCommandData.Length < 11)
+                {
+                    return 0;
+                }
+                return ATCommandData[10];
+            }
+        }
+        public string NodeIdentifier 
+        {
+            get
+            {
+                if (ATCommandData == null || ATCommandData.Length < 12)
+                {
+                    return "";
+                }
+                return new string(Encoding.UTF8.GetChars(ATCommandData, 11, ATCommandData.Length - 11));
+            }
+        }
+    }
+
+    public class RemoteATCommandRequestFrame : ATCommandFrame
     {
         public RemoteATCommandOptions CommandOptions;
 
@@ -99,9 +191,9 @@ namespace CoreCommunication
         }
     }
 
-    public class RemoteATCommandResponseFrame : RemoteATCommandFrame
+    public class RemoteATCommandResponseFrame : ATCommandFrame
     {
-        public byte RemStatus;
+        public CommandStatus Status;
 
         public byte[] SourceAddress16Bit
         {
