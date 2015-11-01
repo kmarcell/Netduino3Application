@@ -5,8 +5,9 @@ namespace CloudLib
 {
     public enum CLEventType : int
     {
-        CLTemperatureReadingEventType,
-        CLLogMessageEventType,
+        TemperatureReading,
+        AmbientLightReading,
+        LogMessage,
     }
 
     public interface ICLSerialization
@@ -19,6 +20,7 @@ namespace CloudLib
         private int eventType;
         private double eventValue;
         private string eventMessage;
+        public string SourceIdentifier;
 
         public CLEvent(int eventType, string eventMessage)
         {
@@ -71,12 +73,10 @@ namespace CloudLib
 
     public interface ICloudPlatform
     {
-        int Connect(IPHostEntry host, string username, string password, int port);
-        int Disconnect();
-
-        int SubscribeToEvents(int[] topicQoS, string[] subTopics);
-        int UnsubscribeFromEvents();
-
+        int Connect(string host, string userName, string password, int port = 1883);
+        void Disconnect();
+        int SubscribeToEvents(MqttQoS qualityOfService, string[] subTopics);
+        int UnsubscribeFromEvents(string[] subTopics);
         int PostEvent(CLEvent e);
     }
 }

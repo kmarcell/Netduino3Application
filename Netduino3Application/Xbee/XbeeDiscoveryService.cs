@@ -9,6 +9,11 @@ namespace XBee
         private XBeeCoordinator coordinator;
         private RemoteXBee[] knownDevices;
 
+        public RemoteXBee[] KnownDevices
+        {
+            get { return knownDevices; }
+        }
+
         public XBeeDiscoveryService(XBeeCoordinator coordinator)
         {
             this.coordinator = coordinator;
@@ -34,10 +39,6 @@ namespace XBee
             knownDevices = xbees;
 
             xbee.coordinator = coordinator;
-            if (xbee.Identifier == null || xbee.Identifier == "")
-            {
-                xbee.Identifier = "Node" + knownDevices.Length;
-            }
         }
 
         public delegate void DiscoveryCallback(RemoteXBee[] knownDevices);

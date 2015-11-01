@@ -18,7 +18,7 @@ namespace NetduinoCore
         {
             if (platform != null)
             {
-                CLEvent e = new CLEvent((int)CLEventType.CLLogMessageEventType, message);
+                CLEvent e = new CLEvent((int)CLEventType.LogMessage, message);
                 try
                 {
                     platform.PostEvent(e);

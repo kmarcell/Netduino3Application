@@ -23,6 +23,8 @@ namespace Netduino3Application
         private NDMQTT upstreamMQTT;
         private OutputPort onboardLED;
         private InterruptPort onboardButton;
+        private XBeeDiscoveryService discoveryService;
+        private RemoteXBee[] knownDevices;
 
         public void applicationWillStart()
         {
@@ -52,11 +54,9 @@ namespace Netduino3Application
 
             xbeeCoordinator.BytesReadFromSerial += new BytesReadFromSerialEventHandler(BytesReadFromSerialHandler);
             xbeeCoordinator.FrameDroppedByChecksum += new FrameDroppedByChecksumEventHandler(FrameDroppedByChecksumHandler);
-            xbeeCoordinator.ReceivedRemoteFrame += new ReceivedRemoteFrameEventHandler(ReceivedRemoteFrameHandler);
             xbeeCoordinator.StartListen();
 
             upstreamMQTT = new NDMQTT();
-            startMQTT();
 
             // setup our interrupt port (on-board button)
             onboardButton = new InterruptPort((Cpu.Pin)0x15, false, Port.ResistorMode.Disabled, Port.InterruptMode.InterruptEdgeHigh);
@@ -64,10 +64,11 @@ namespace Netduino3Application
             // assign our interrupt handler
             onboardButton.OnInterrupt += new NativeEventHandler(button_OnInterrupt);
 
-            XBeeDiscoveryService service = new XBeeDiscoveryService(xbeeCoordinator);
-            service.Discover(delegate(RemoteXBee[] knownDevices)
+            discoveryService = new XBeeDiscoveryService(xbeeCoordinator);
+            discoveryService.Discover(delegate(RemoteXBee[] knownDevices)
             {
-                NDLogger.Log("Device count " + knownDevices.Length);
+                this.knownDevices = knownDevices;
+                xbeeCoordinator.ReceivedRemoteFrame += new ReceivedRemoteFrameEventHandler(ReceivedRemoteFrameHandler);
             });
         }
 
@@ -86,7 +87,7 @@ namespace Netduino3Application
             {
                 try
                 {
-                    upstreamMQTT.UnsubscribeFromEvents();
+                    upstreamMQTT.UnsubscribeFromEvents(new String[] { Configuration.MQTT.SensorDataTopic });
                 }
                 catch
                 {
@@ -112,22 +113,12 @@ namespace Netduino3Application
 
         void startMQTT()
         {
-            IPHostEntry hostEntry = null;
-            try
-            {
-                hostEntry = Dns.GetHostEntry(Configuration.MQTT.HostName);
-            }
-            catch (Exception e)
-            {
-                NDLogger.Log("Unable to get host entry by DNS error: " + e, LogLevel.Error);
-                return;
-            }
-
-            int returnCode = upstreamMQTT.Connect(hostEntry, Configuration.MQTT.UserName, Configuration.MQTT.Password, Configuration.MQTT.HostPort);
+            int returnCode = upstreamMQTT.Connect(Configuration.MQTT.HostName, Configuration.MQTT.UserName, Configuration.MQTT.Password);
 
             if (returnCode == 0)
             {
                 NDLogger.AddLogger(new MQTTLogger(upstreamMQTT));
+                upstreamMQTT.MqttMsgPublishReceived += new MqttMsgPublishReceivedEventHandler(MqttMsgPublishReceived);
             }
             else
             {
@@ -135,8 +126,12 @@ namespace Netduino3Application
                 return;
             }
 
-            upstreamMQTT.SubscribeToEvents(new int[] { 0 }, new String[] { Configuration.MQTT.SensorDataTopic });
-            upstreamMQTT.StartListen();
+            upstreamMQTT.SubscribeToEvents(MqttQoS.DeliverAtMostOnce, new String[] { Configuration.MQTT.SensorDataTopic });
+        }
+
+        private void MqttMsgPublishReceived(object sender, MqttMsgPublishReceivedEventArgs e)
+        {
+
         }
 
         public NDConfiguration Configuration
@@ -148,20 +143,38 @@ namespace Netduino3Application
         {
             if (!(frame is DigitalAnalogSampleFrame)) { return; }
 
-            double analogSample = (frame as DigitalAnalogSampleFrame).AnalogSampleData[0];
+            DigitalAnalogSampleFrame sampleFrame = frame as DigitalAnalogSampleFrame;
+            double analogSample = sampleFrame.AnalogSampleData[0];
             double temperatureCelsius = ((analogSample / 1023.0 * 3.3) - 0.5) * 100.0;
             NDLogger.Log("Temperature " + temperatureCelsius + " Celsius" + " sample " + analogSample, LogLevel.Info);
-
-            if (upstreamMQTT != null)
-            {
-                upstreamMQTT.PostEvent(new CLEvent((int)CLEventType.CLTemperatureReadingEventType, temperatureCelsius));
-            }
 
             analogSample = 1023.0 - (frame as DigitalAnalogSampleFrame).AnalogSampleData[1];
             double ambientLightPercent = (analogSample / 1023.0) * 100.0;
             double lux = (analogSample / 1023.0) * 1200.0;
             NDLogger.Log("Ambient light percent " + ambientLightPercent + "% Lux: " + lux, LogLevel.Info);
 
+            if (upstreamMQTT != null)
+            {
+                RemoteXBee sourceXBee = null;
+                foreach (RemoteXBee xbee in knownDevices)
+                {
+                    if (Frame.isEqualAddress(xbee.SourceAddress64Bit, sampleFrame.SourceAddress64Bit))
+                    {
+                        sourceXBee = xbee;
+                    }
+                }
+
+                if (sourceXBee == null)
+                {
+                    sourceXBee = new RemoteXBee(sampleFrame.SourceAddress16Bit, sampleFrame.SourceAddress64Bit, "");
+                    discoveryService.AddXBee(sourceXBee);
+                    knownDevices = discoveryService.KnownDevices;
+                }
+
+                CLEvent e = new CLEvent((int)CLEventType.TemperatureReading, temperatureCelsius);
+                e.SourceIdentifier = sourceXBee.SerialNumber;
+                upstreamMQTT.PostEvent(e);
+            }
         }
 
         void FrameDroppedByChecksumHandler(object sender, FrameDroppedByChecksumEventArgs e)
@@ -182,18 +195,9 @@ namespace Netduino3Application
             string log = "";
             for (int i = 0; i < bytes.Length; ++i)
             {
-                log += ByteToHex(bytes[i]) + " ";
+                log += ByteOperations.ByteToHex(bytes[i]) + " ";
             }
             NDLogger.Log(log, LogLevel.Verbose);
-        }
-
-        string ByteToHex(byte b)
-        {
-            const string hex = "0123456789ABCDEF";
-            int lowNibble = b & 0x0F;
-            int highNibble = (b & 0xF0) >> 4;
-            string s = new string(new char[] { hex[highNibble], hex[lowNibble] });
-            return s;
         }
     }
 }

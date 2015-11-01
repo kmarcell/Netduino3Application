@@ -11,21 +11,21 @@ namespace NetduinoCore
     {
         public NDMQTT()
         {
-            this.TopicFromEventType = topicFromEventType;
+            this.TopicFromEvent = topicFromEvent;
             this.clientID = ClientID;
-            this.ListenerThreadException += ListenerExceptionHandler;
         }
 
-        private string topicFromEventType(int type)
+        private string topicFromEvent(CLEvent clEvent)
         {
             String topic = "";
-            switch (type)
+            switch (clEvent.EventType)
             {
-                case (int)CLEventType.CLTemperatureReadingEventType:
-                    topic = NDConfiguration.DefaultConfiguration.MQTT.SensorDataTopic;
+                case (int)CLEventType.TemperatureReading:
+                case (int)CLEventType.AmbientLightReading:
+                    topic = NDConfiguration.DefaultConfiguration.MQTT.SensorDataTopic + "/" + clEvent.SourceIdentifier;
                     break;
 
-                case (int)CLEventType.CLLogMessageEventType:
+                case (int)CLEventType.LogMessage:
                     topic = NDConfiguration.DefaultConfiguration.MQTT.LogTopic;
                     break;
 
@@ -64,39 +64,33 @@ namespace NetduinoCore
             }
         }
 
-        public override int SubscribeToEvents(int[] topicQoS, string[] subTopics)
+        public override int SubscribeToEvents(MqttQoS qualityOfService, string[] subTopics)
         {
-            int returnCode = base.SubscribeToEvents(topicQoS, subTopics);
-            if (returnCode == 0)
-            {
-                NDLogger.Log("Subscribed to " + subTopics, LogLevel.Verbose);
-            }
-            else
-            {
-                NDLogger.Log("Subscription failed with errorCode: " + returnCode, LogLevel.Error);
-            }
+            int returnCode = base.SubscribeToEvents(qualityOfService, subTopics);
+            NDLogger.Log("Subscribed to " + subTopics, LogLevel.Verbose);
             return returnCode;
         }
 
-        public override int Connect(IPHostEntry host, string userName, string password, int port = 1883)
+        public override int PostEvent(CLEvent e)
         {
-            int returnCode = base.Connect(host, userName, password, port);
-            if (returnCode != 0)
+            string topic = TopicFromEvent(e);
+            string message = e.serialize();
+            NDLogger.Log("Will publish to topic: " + topic + "message: " + message, LogLevel.Verbose);
+            return base.PostEvent(e);
+        }
+
+        public override int Connect(string host, string userName, string password, int port = 1883)
+        {
+            int returnCode = base.Connect(host, userName, password);
+            if (IsConnected)
             {
-                NDLogger.Log("MQTT connection error: " + returnCode, LogLevel.Error);
+                NDLogger.Log("Connected to MQTT!", LogLevel.Verbose);
             }
             else
             {
-                NDLogger.Log("Connected to MQTT", LogLevel.Verbose);
+                NDLogger.Log("MQTT connection error!", LogLevel.Error);
             }
             return returnCode;
-        }
-
-        public void ListenerExceptionHandler(object sender, ListenerThreadExceptionEventArgs e)
-        {
-            NDLogger.Log("MQTT cloud platform listener error: " + e.Exception.Message, LogLevel.Error);
-            NDLogger.Log(e.Exception.StackTrace, LogLevel.Verbose);
-            NDLogger.Log("MQTT cloud platform restarting", LogLevel.Verbose);
         }
     }
 }
