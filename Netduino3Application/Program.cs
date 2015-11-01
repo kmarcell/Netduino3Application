@@ -43,7 +43,6 @@ namespace Netduino3Application
 
         static void waitForNetworkSetUp()
         {
-            NetworkInterface NI = NetworkInterface.GetAllNetworkInterfaces()[0];
             while (IPAddress.GetDefaultLocalAddress() == IPAddress.Any) ;
         }
 
