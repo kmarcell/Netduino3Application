@@ -36,6 +36,7 @@ namespace XBee
         {
             RemoteXBee[] xbees = new RemoteXBee[knownDevices.Length + 1];
             Array.Copy(knownDevices, xbees, knownDevices.Length);
+            xbees[knownDevices.Length] = xbee;
             knownDevices = xbees;
 
             xbee.coordinator = coordinator;

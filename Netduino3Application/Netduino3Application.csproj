@@ -61,7 +61,7 @@
   <ItemGroup>
     <Reference Include="M2Mqtt.NetMf, Version=4.2.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\m2mqtt-master\bin\Release\M2Mqtt.NetMf43\M2Mqtt.NetMf.dll</HintPath>
+      <HintPath>..\packages\M2Mqtt.NetMf43\M2Mqtt.NetMf.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.SPOT.Hardware" />
     <Reference Include="Microsoft.SPOT.Hardware.PWM" />
@@ -69,7 +69,6 @@
     <Reference Include="Microsoft.SPOT.Native" />
     <Reference Include="Microsoft.SPOT.Net" />
     <Reference Include="Microsoft.SPOT.Net.Security" />
-    <Reference Include="Microsoft.SPOT.Time" />
     <Reference Include="SecretLabs.NETMF.Hardware" />
     <Reference Include="SecretLabs.NETMF.Hardware.Netduino" />
     <Reference Include="SecretLabs.NETMF.IO, Version=4.3.1.0, Culture=neutral, processorArchitecture=MSIL" />

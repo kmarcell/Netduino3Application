@@ -71,14 +71,6 @@ namespace NetduinoCore
             return returnCode;
         }
 
-        public override int PostEvent(CLEvent e)
-        {
-            string topic = TopicFromEvent(e);
-            string message = e.serialize();
-            NDLogger.Log("Will publish to topic: " + topic + "message: " + message, LogLevel.Verbose);
-            return base.PostEvent(e);
-        }
-
         public override int Connect(string host, string userName, string password, int port = 1883)
         {
             int returnCode = base.Connect(host, userName, password);

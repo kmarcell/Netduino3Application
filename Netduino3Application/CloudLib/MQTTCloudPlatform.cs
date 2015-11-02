@@ -4,7 +4,6 @@ using System.Text;
 using System.Threading;
 
 using Microsoft.SPOT;
-using Microsoft.SPOT.Time;
 using Microsoft.SPOT.Net;
 
 using Microsoft.SPOT.Hardware;
@@ -86,17 +85,8 @@ namespace CloudLib
             // register to message received 
             mqttClient.MqttMsgPublishReceived += client_MqttMsgPublishReceived;
 
-            int returnCode = -1;
-            try
-            {
-                string clientId = this.clientID == null ? Guid.NewGuid().ToString() : this.clientID;
-                returnCode = mqttClient.Connect(clientID, userName, password);
-            }
-            catch (Exception e)
-            {
-                Debug.Print(e.Message);
-                Debug.Print(e.StackTrace);
-            }
+            string clientId = this.clientID == null ? Guid.NewGuid().ToString() : this.clientID;
+            int returnCode = mqttClient.Connect(clientID, userName, password);
 
             return mqttClient.IsConnected ? 0 : returnCode;
         }
