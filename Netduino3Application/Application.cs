@@ -57,7 +57,7 @@ namespace Netduino3Application
             xbeeCoordinator.StartListen();
 
             upstreamMQTT = new NDMQTT();
-            startMQTT();
+            LocalAccessService.Current.Start();
 
             // setup our interrupt port (on-board button)
             onboardButton = new InterruptPort((Cpu.Pin)0x15, false, Port.ResistorMode.Disabled, Port.InterruptMode.InterruptEdgeHigh);

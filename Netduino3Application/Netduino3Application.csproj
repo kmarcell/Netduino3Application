@@ -40,6 +40,7 @@
     <Compile Include="CoreCommunication\FrameQueueService.cs" />
     <Compile Include="CoreCommunication\FrameSerializer.cs" />
     <Compile Include="CoreCommunication\FrameSlicer.cs" />
+    <Compile Include="LocalAccessService.cs" />
     <Compile Include="NetduinoCore\MQTTLogger.cs" />
     <Compile Include="CoreCommunication\ByteOperations.cs" />
     <Compile Include="CoreCommunication\DiscoveryService.cs" />
@@ -62,6 +63,10 @@
     <Reference Include="M2Mqtt.NetMf, Version=4.2.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\packages\M2Mqtt.NetMf43\M2Mqtt.NetMf.dll</HintPath>
+      </Reference>
+    <Reference Include="HttpLibrary, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\HttpLibrary\HttpLibrary.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.SPOT.Hardware" />
     <Reference Include="Microsoft.SPOT.Hardware.PWM" />
