@@ -9,7 +9,7 @@ namespace XBee
     {
         public byte[] SourceAddress16Bit;
         public byte[] SourceAddress64Bit;
-        public string identifier;
+        private string identifier;
 
         public string SerialNumber
         {

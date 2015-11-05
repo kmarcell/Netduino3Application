@@ -65,7 +65,7 @@ namespace CloudLib
         {
             get
             {
-                return mqttClient.IsConnected;
+                return mqttClient == null ? false : mqttClient.IsConnected;
             }
         }
 
@@ -107,24 +107,35 @@ namespace CloudLib
 
         public void Disconnect()
         {
-            mqttClient.Disconnect();
+            if (mqttClient != null)
+            {
+                mqttClient.Disconnect();
+            }
         }
 
         public virtual int SubscribeToEvents(MqttQoS qualityOfService, string[] subTopics)
         {
-            int returnCode = mqttClient.Subscribe(subTopics, new byte[] { (byte)qualityOfService });
-            return returnCode;
+            if (mqttClient != null)
+            {
+                int returnCode = mqttClient.Subscribe(subTopics, new byte[] { (byte)qualityOfService });
+                return returnCode;
+            }
+            return -1;
         }
 
         public int UnsubscribeFromEvents(string[] subTopics)
         {
-            int returnCode = mqttClient.Unsubscribe(subTopics);
-            return returnCode;
+            if (mqttClient != null)
+            {
+                int returnCode = mqttClient.Unsubscribe(subTopics);
+                return returnCode;
+            }
+            return -1;
         }
 
         public virtual int PostEvent(CLEvent e)
         {
-            if (!IsConnected) { return -1; }
+            if (!IsConnected || mqttClient == null) { return -1; }
 
             string topic = TopicFromEvent(e);
             string message = e.serialize();

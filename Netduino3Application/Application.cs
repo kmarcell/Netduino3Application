@@ -17,7 +17,7 @@ using XBee;
 
 namespace Netduino3Application
 {
-    class Application : IApplication
+    class Application : IApplication, ILocalAccessServiceDataSource
     {
         private XBeeCoordinator xbeeCoordinator;
         private NDMQTT upstreamMQTT;
@@ -57,7 +57,10 @@ namespace Netduino3Application
             xbeeCoordinator.StartListen();
 
             upstreamMQTT = new NDMQTT();
+
+            LocalAccessService.Current.DataSource = this;
             LocalAccessService.Current.Start();
+            
 
             // setup our interrupt port (on-board button)
             onboardButton = new InterruptPort((Cpu.Pin)0x15, false, Port.ResistorMode.Disabled, Port.InterruptMode.InterruptEdgeHigh);
@@ -199,6 +202,16 @@ namespace Netduino3Application
                 log += ByteOperations.ByteToHex(bytes[i]) + " ";
             }
             NDLogger.Log(log, LogLevel.Verbose);
+        }
+
+        public int NumberOfSensors
+        {
+            get { return knownDevices.Length; }
+        }
+
+        public string[] SensorInfoAtIndex(int index)
+        {
+            return new string[] { "Sensor name: " + knownDevices[index].Identifier,  };
         }
     }
 }

@@ -63,10 +63,6 @@
     <Reference Include="M2Mqtt.NetMf, Version=4.2.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\packages\M2Mqtt.NetMf43\M2Mqtt.NetMf.dll</HintPath>
-      </Reference>
-    <Reference Include="HttpLibrary, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\HttpLibrary\HttpLibrary.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.SPOT.Hardware" />
     <Reference Include="Microsoft.SPOT.Hardware.PWM" />
@@ -80,5 +76,11 @@
     <Reference Include="System" />
     <Reference Include="System.IO" />
     <Reference Include="System.Net.Security" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\HttpLibrary\HttpLibrary.csproj">
+      <Project>{DDD30B13-E0D4-4604-9310-1DAAC7F3E9B6}</Project>
+      <Name>HttpLibrary</Name>
+    </ProjectReference>
   </ItemGroup>
 </Project>
