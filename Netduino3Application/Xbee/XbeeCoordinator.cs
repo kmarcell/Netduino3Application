@@ -77,7 +77,7 @@ namespace XBee
             serialPort.Flush();
         }
 
-        public void EnqueueFrame(Frame frame, Callback callback)
+        public void EnqueueFrame(ATCommandFrame frame, Callback callback)
         {
             RequestResponseService.EnqueueFrame(frame, callback);
         }

@@ -47,26 +47,37 @@ namespace Netduino3Application
 
         void server_OnRequestReceived(object sender, OnRequestReceivedArgs e)
         {
-            if (DataSource == null && e.FileName != "index.html") { return; }
+            if (DataSource == null) { return; }
 
             NDLogger.Log("HTTP Request received: " + new string (Encoding.UTF8.GetChars(e.Request)) + " File name: " + e.FileName, LogLevel.Verbose);
 
             try
             {
-                SendTemplate("index.template", delegate(string key)
+                switch (e.FileName)
                 {
-                    switch (key)
-                    {
-                        case "@SLI":
-                            return SensorListInfo();
-                    }
-                    return "";
-                });
+                    case "index.html":
+                    case @"\SD\index.html":
+                        RespondWithIndexPage();
+                        break;
+                }
             }
             catch (Exception ex)
             {
                 HttpService.SendInternalServerError(ex.Message);
             }
+        }
+
+        void RespondWithIndexPage()
+        {
+            SendTemplate("index.template", delegate(string key)
+            {
+                switch (key)
+                {
+                    case "@SLI":
+                        return SensorListInfo();
+                }
+                return "";
+            });
         }
 
         private string SensorListInfo()

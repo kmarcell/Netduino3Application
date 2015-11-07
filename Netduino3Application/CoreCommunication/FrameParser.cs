@@ -82,7 +82,7 @@ namespace CoreCommunication
             if (frame != null)
             {
                 frame.SourceAddress64Bit = new byte[8];
-                Array.Copy(bytes, 5, frame.SourceAddress64Bit, 0, 8);
+                Array.Copy(bytes, 4, frame.SourceAddress64Bit, 0, 8);
             }
             return frame;
         }

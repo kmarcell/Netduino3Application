@@ -170,7 +170,7 @@ namespace Netduino3Application
 
                 if (sourceXBee == null)
                 {
-                    sourceXBee = new RemoteXBee(sampleFrame.SourceAddress16Bit, sampleFrame.SourceAddress64Bit, "");
+                    sourceXBee = new RemoteXBee(sampleFrame.SourceAddress16Bit, sampleFrame.SourceAddress64Bit, null);
                     discoveryService.AddXBee(sourceXBee);
                     knownDevices = discoveryService.KnownDevices;
                 }

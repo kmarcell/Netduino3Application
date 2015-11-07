@@ -38,7 +38,6 @@ namespace XBee
             Array.Copy(knownDevices, xbees, knownDevices.Length);
             xbees[knownDevices.Length] = xbee;
             knownDevices = xbees;
-
             xbee.coordinator = coordinator;
         }
 
@@ -46,9 +45,9 @@ namespace XBee
         public void Discover(DiscoveryCallback callback)
         {
             coordinator.StartListen();
-            Frame discoverNodes = FrameBuilder.ATCommandRequest
+            ATCommandRequestFrame discoverNodes = FrameBuilder.ATCommandRequest
                                     .setATCommandName("ND")
-                                    .Build();
+                                    .Build() as ATCommandRequestFrame;
 
             coordinator.EnqueueFrame(discoverNodes, delegate(Frame frame)
             {

@@ -21,7 +21,7 @@ namespace CoreCommunication
             waitingForSendingQueue = new Queue();
         }
 
-        public void EnqueueFrame(Frame frame, Callback callback)
+        public void EnqueueFrame(ATCommandFrame frame, Callback callback)
         {
             int frameID = UnusedFrameId;
             if (frameID == NOTFOUND)
@@ -47,14 +47,14 @@ namespace CoreCommunication
         {
             if (frame is RemoteATCommandResponseFrame || frame is ATCommandResponseFrame)
             {
-                ResponseReceived(frame);
+                ResponseReceived(frame as ATCommandFrame);
             }
         }
 
-        public void ResponseReceived(Frame response)
+        public void ResponseReceived(ATCommandFrame response)
         {
             int index = waitingForResponseQueue.IndexOfFramePassingTest(delegate(Frame frame) {
-                return (frame.FrameID == response.FrameID) && isResponseForRequest(response, frame);
+                return (frame.FrameID == response.FrameID) && isResponseForRequest(response, (frame as ATCommandFrame));
             });
 
             if (index == NOTFOUND) { return; }
@@ -66,8 +66,13 @@ namespace CoreCommunication
             }
         }
 
-        private bool isResponseForRequest(Frame response, Frame request)
+        private bool isResponseForRequest(ATCommandFrame response, ATCommandFrame request)
         {
+            if (request.ATCommandName != response.ATCommandName)
+            {
+                return false;
+            }
+
             if (request is RemoteATCommandRequestFrame)
             {
                 return (Frame.isEqualAddress((request as RemoteATCommandRequestFrame).DestinationAddress16Bit, new byte[] { 0xFF, 0xFE }) &&

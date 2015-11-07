@@ -28,7 +28,7 @@ namespace XBee
         {
             get
             {
-                if (identifier != null && identifier != "")
+                if (identifier != null && identifier != " ")
                 {
                     return identifier;
                 }
@@ -37,8 +37,6 @@ namespace XBee
         }
 
         public XBeeCoordinator coordinator;
-
-        public RemoteXBee() { }
 
         public RemoteXBee(byte[] SourceAddress16Bit, byte[] SourceAddress64Bit, string Identifier)
         {
