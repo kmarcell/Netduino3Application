@@ -11,7 +11,7 @@ namespace CoreCommunication
             int nBytesFrameLength = 2;
             int nBytesFrameChecksum = 1;
 
-            if (offset < 0 || offset >= buffer.Length || buffer.Length < (nBytesStartByte + nBytesFrameLength))
+            if (offset < 0 || offset >= buffer.Length || buffer.Length < (offset + nBytesStartByte + nBytesFrameLength))
             {
                 return new byte[] { };
             }

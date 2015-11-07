@@ -46,7 +46,7 @@ namespace XBee
 
     public delegate void BytesReadFromSerialEventHandler(object sender, BytesReadFromSerialEventArgs e);
 
-    class XBeeCoordinator
+    public class XBeeCoordinator
     {
         public event ReceivedRemoteFrameEventHandler ReceivedRemoteFrame;
         public event FrameDroppedByChecksumEventHandler FrameDroppedByChecksum;

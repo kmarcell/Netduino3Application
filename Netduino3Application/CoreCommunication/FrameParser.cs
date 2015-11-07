@@ -31,6 +31,10 @@ namespace CoreCommunication
                 case FrameType.ATCommandResponse:
                     frame = ATCommandResponseFromFrameRawBytes(bytes);
                     break;
+                
+                case FrameType.RemoteCommandResponse:
+                    frame = RemoteATCommandResponseFromFrameRawBytes(bytes);
+                    break;
 
                 default:
                     Debug.Print("Received unknown frame type: " + frameType);
@@ -43,26 +47,58 @@ namespace CoreCommunication
         private static ATCommandResponseFrame ATCommandResponseFromFrameRawBytes(byte[] bytes)
         {
             int ATCommandNameIndex = 5;
-            int CommandStatusIndex = 7;
-            int ATCommandDataIndex = 8;
+            int CommandStatusIndex = ATCommandNameIndex + 2;
+            int ATCommandDataIndex = CommandStatusIndex + 1;
 
             if (bytes.Length <= ATCommandDataIndex) { return null; }
 
-            byte[] commandData = null;
-            if (bytes.Length > ATCommandDataIndex + 1) 
-            {
-                commandData = new byte[bytes.Length - ATCommandDataIndex - 1];
-                Array.Copy(bytes, ATCommandDataIndex, commandData, 0, commandData.Length);
-            }
+            int dataLength = ByteOperations.littleEndianWordFromBytes(bytes[1], bytes[2]);
+            dataLength -= (ATCommandDataIndex - 3);
 
-            Frame frame = FrameBuilder.ATCommandResponse
+            if (bytes.Length < ATCommandDataIndex + dataLength) { return null; }
+
+            byte[] commandData = new byte[dataLength];
+            Array.Copy(bytes, ATCommandDataIndex, commandData, 0, dataLength);
+
+            ATCommandResponseFrame frame = FrameBuilder.ATCommandResponse
                         .setATCommandName(new string (Encoding.UTF8.GetChars(bytes, ATCommandNameIndex, 2)))
                         .setCommandStatus((CommandStatus)bytes[CommandStatusIndex])
                         .setATCommandData(commandData)
-                        .Build();
+                        .Build() as ATCommandResponseFrame;
 
             frame.FrameID = bytes[4];
-            return (ATCommandResponseFrame)frame;
+            return frame;
+        }
+
+        private static RemoteATCommandResponseFrame RemoteATCommandResponseFromFrameRawBytes(byte[] bytes)
+        {
+            int SourceAddressIndex = 5;
+            int ATCommandNameIndex = SourceAddressIndex + 8 + 2;
+            int CommandStatusIndex = ATCommandNameIndex + 2;
+            int ATCommandDataIndex = CommandStatusIndex + 1;
+
+            if (bytes.Length <= ATCommandDataIndex) { return null; }
+
+            int dataLength = ByteOperations.littleEndianWordFromBytes(bytes[1], bytes[2]);
+            dataLength -= (ATCommandDataIndex - 3);
+
+            if (bytes.Length < ATCommandDataIndex + dataLength) { return null; }
+
+            byte[] sourceAddress = new byte[8];
+            Array.Copy(bytes, SourceAddressIndex, sourceAddress, 0, 8);
+
+            byte[] commandData = new byte[dataLength];
+            Array.Copy(bytes, ATCommandDataIndex, commandData, 0, dataLength);
+
+            RemoteATCommandResponseFrame frame = FrameBuilder.RemoteATCommandResponse
+                            .setATCommandName(new string(Encoding.UTF8.GetChars(bytes, ATCommandNameIndex, 2)))
+                            .setCommandStatus((CommandStatus)bytes[CommandStatusIndex])
+                            .setATCommandData(commandData)
+                            .setSourceAddress64Bit(sourceAddress)
+                            .Build() as RemoteATCommandResponseFrame;
+
+            frame.FrameID = bytes[4];
+            return frame;
         }
 
         private static DigitalAnalogSampleFrame DIOADCRx16IndicatorFrameFromRawBytes(byte[] bytes)

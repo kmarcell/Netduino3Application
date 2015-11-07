@@ -4,10 +4,24 @@ using CoreCommunication;
 
 namespace XBee
 {
-    class XBeeDiscoveryService
+    public class RemoteDeviceFoundEventArgs : EventArgs
+    {
+        public RemoteXBee device;
+
+        public RemoteDeviceFoundEventArgs(RemoteXBee device)
+        {
+            this.device = device;
+        }
+    }
+
+    public delegate void RemoteDeviceFoundEventHandler(RemoteDeviceFoundEventArgs e);
+
+    public class XBeeDiscoveryService
     {
         private XBeeCoordinator coordinator;
         private RemoteXBee[] knownDevices;
+        
+        public event RemoteDeviceFoundEventHandler RemoteDeviceFound;
 
         public RemoteXBee[] KnownDevices
         {
@@ -22,7 +36,7 @@ namespace XBee
 
         private bool HandleNetworkDiscoveryResponse(NetworkDiscoveryResponseFrame frame)
         {
-            if (frame.ATCommandData == null)
+            if (frame.ATCommandData == null || frame.ATCommandData.Length == 0)
             {
                 return true;
             }
@@ -32,19 +46,30 @@ namespace XBee
             return false;
         }
 
-        public void AddXBee(RemoteXBee xbee)
+        private void onRemoteDeviceFound(RemoteXBee xbee)
+        {
+            RemoteDeviceFoundEventHandler handler = RemoteDeviceFound;
+            if (handler != null)
+            {
+                handler(new RemoteDeviceFoundEventArgs(xbee));
+            }
+        }
+
+        private void AddXBee(RemoteXBee xbee)
         {
             RemoteXBee[] xbees = new RemoteXBee[knownDevices.Length + 1];
             Array.Copy(knownDevices, xbees, knownDevices.Length);
             xbees[knownDevices.Length] = xbee;
             knownDevices = xbees;
-            xbee.coordinator = coordinator;
+            xbee.Coordinator = coordinator;
+            onRemoteDeviceFound(xbee);
         }
 
-        public delegate void DiscoveryCallback(RemoteXBee[] knownDevices);
-        public void Discover(DiscoveryCallback callback)
+        public void Discover()
         {
+            coordinator.ReceivedRemoteFrame += new ReceivedRemoteFrameEventHandler(ReceivedRemoteFrameHandler);
             coordinator.StartListen();
+
             ATCommandRequestFrame discoverNodes = FrameBuilder.ATCommandRequest
                                     .setATCommandName("ND")
                                     .Build() as ATCommandRequestFrame;
@@ -57,13 +82,29 @@ namespace XBee
                 }
 
                 bool endOfDiscovery = HandleNetworkDiscoveryResponse(new NetworkDiscoveryResponseFrame(frame as ATCommandResponseFrame));
-                if (endOfDiscovery && callback != null)
-                {
-                    callback(knownDevices);
-                }
-                
                 return endOfDiscovery;
             });
+        }
+
+        void ReceivedRemoteFrameHandler(object sender, Frame frame)
+        {
+            if (!(frame is DigitalAnalogSampleFrame)) { return; }
+            DigitalAnalogSampleFrame sampleFrame = frame as DigitalAnalogSampleFrame;
+
+            RemoteXBee sourceXBee = null;
+            foreach (RemoteXBee xbee in knownDevices)
+            {
+                if (Frame.isEqualAddress(xbee.SourceAddress64Bit, sampleFrame.SourceAddress64Bit))
+                {
+                    sourceXBee = xbee;
+                }
+            }
+
+            if (sourceXBee == null)
+            {
+                sourceXBee = new RemoteXBee(sampleFrame.SourceAddress16Bit, sampleFrame.SourceAddress64Bit, null);
+                AddXBee(sourceXBee);
+            }
         }
     }
 }

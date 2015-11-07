@@ -60,7 +60,6 @@ namespace Netduino3Application
 
             LocalAccessService.Current.DataSource = this;
             LocalAccessService.Current.Start();
-            
 
             // setup our interrupt port (on-board button)
             onboardButton = new InterruptPort((Cpu.Pin)0x15, false, Port.ResistorMode.Disabled, Port.InterruptMode.InterruptEdgeHigh);
@@ -69,11 +68,14 @@ namespace Netduino3Application
             onboardButton.OnInterrupt += new NativeEventHandler(button_OnInterrupt);
 
             discoveryService = new XBeeDiscoveryService(xbeeCoordinator);
-            discoveryService.Discover(delegate(RemoteXBee[] knownDevices)
-            {
-                this.knownDevices = knownDevices;
-                xbeeCoordinator.ReceivedRemoteFrame += new ReceivedRemoteFrameEventHandler(ReceivedRemoteFrameHandler);
-            });
+            discoveryService.RemoteDeviceFound += new RemoteDeviceFoundEventHandler(OnRemoteXBeeFound);
+            discoveryService.Discover();
+        }
+
+        void OnRemoteXBeeFound(RemoteDeviceFoundEventArgs e)
+        {
+            knownDevices = discoveryService.KnownDevices;
+            e.device.UpdateEvent += new UpdateEventHandler(OnRemoteXBeeUpdate);
         }
 
         private SerialPort createSerialPortWithName(string name)
@@ -143,41 +145,18 @@ namespace Netduino3Application
             get { return NDConfiguration.DefaultConfiguration; }
         }
 
-        void ReceivedRemoteFrameHandler(object sender, Frame frame)
+        void OnRemoteXBeeUpdate(RemoteXBee xbee, Widget[] updateData)
         {
-            if (!(frame is DigitalAnalogSampleFrame)) { return; }
-
-            DigitalAnalogSampleFrame sampleFrame = frame as DigitalAnalogSampleFrame;
-            double analogSample = sampleFrame.AnalogSampleData[0];
-            double temperatureCelsius = ((analogSample / 1023.0 * 3.3) - 0.5) * 100.0;
-            NDLogger.Log("Temperature " + temperatureCelsius + " Celsius" + " sample " + analogSample, LogLevel.Info);
-
-            analogSample = 1023.0 - (frame as DigitalAnalogSampleFrame).AnalogSampleData[1];
-            double ambientLightPercent = (analogSample / 1023.0) * 100.0;
-            double lux = (analogSample / 1023.0) * 1200.0;
-            NDLogger.Log("Ambient light percent " + ambientLightPercent + "% Lux: " + lux, LogLevel.Info);
-
             if (upstreamMQTT != null)
             {
-                RemoteXBee sourceXBee = null;
-                foreach (RemoteXBee xbee in knownDevices)
+                foreach (Widget widget in updateData)
                 {
-                    if (Frame.isEqualAddress(xbee.SourceAddress64Bit, sampleFrame.SourceAddress64Bit))
+                    if (widget.Type == WidgetType.TemperatureSensor)
                     {
-                        sourceXBee = xbee;
+                        CLEvent e = new CLEvent((int)CLEventType.TemperatureReading, widget.Value, xbee.SerialNumber);
+                        upstreamMQTT.PostEvent(e);
                     }
                 }
-
-                if (sourceXBee == null)
-                {
-                    sourceXBee = new RemoteXBee(sampleFrame.SourceAddress16Bit, sampleFrame.SourceAddress64Bit, null);
-                    discoveryService.AddXBee(sourceXBee);
-                    knownDevices = discoveryService.KnownDevices;
-                }
-
-                CLEvent e = new CLEvent((int)CLEventType.TemperatureReading, temperatureCelsius);
-                e.SourceIdentifier = sourceXBee.SerialNumber;
-                upstreamMQTT.PostEvent(e);
             }
         }
 
@@ -211,7 +190,7 @@ namespace Netduino3Application
 
         public string[] SensorInfoAtIndex(int index)
         {
-            return new string[] { "Sensor name: " + knownDevices[index].Identifier,  };
+            return new string[] { "Sensor name: " + knownDevices[index].SerialNumber, };
         }
     }
 }

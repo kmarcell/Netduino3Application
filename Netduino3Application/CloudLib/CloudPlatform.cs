@@ -28,10 +28,11 @@ namespace CloudLib
             this.eventMessage = eventMessage;
         }
 
-        public CLEvent(int eventType, double eventValue)
+        public CLEvent(int eventType, double eventValue, string sourceIdentifier = "")
         {
             this.eventType = eventType;
             this.eventValue = eventValue;
+            this.SourceIdentifier = sourceIdentifier;
         }
 
         public int EventType

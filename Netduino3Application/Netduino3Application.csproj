@@ -43,7 +43,6 @@
     <Compile Include="LocalAccessService.cs" />
     <Compile Include="NetduinoCore\MQTTLogger.cs" />
     <Compile Include="CoreCommunication\ByteOperations.cs" />
-    <Compile Include="CoreCommunication\DiscoveryService.cs" />
     <Compile Include="CoreCommunication\FrameParser.cs" />
     <Compile Include="CoreCommunication\FrameType.cs" />
     <Compile Include="IApplication.cs" />

@@ -7,8 +7,8 @@ namespace CoreCommunication
     {
         // Private variables
         private FrameType frameType;
-        private byte[] destinationAddress16Bit;
-        private byte[] destinationAddress64Bit;
+        private byte[] Address16Bit;
+        private byte[] Address64Bit;
         private RemoteATCommandOptions CmdOptions = RemoteATCommandOptions.ApplyChanges; // Bit 1: Apply changes on remote device. NOTE: If this bit is not set, an AC (or WR+FR) command must be sent before changes will take effect.
         private string commandName;
         private byte[] commandData;
@@ -22,12 +22,12 @@ namespace CoreCommunication
 
         public byte[] DestinationAddress16Bit
         {
-            get { return destinationAddress16Bit; }
+            get { return Address16Bit; }
         }
 
         public byte[] DestinationAddress64Bit
         {
-            get { return destinationAddress64Bit; }
+            get { return Address64Bit; }
         }
 
         public RemoteATCommandOptions CommandOptions
@@ -54,6 +54,7 @@ namespace CoreCommunication
         public FrameBuilder(FrameType frameType)
         {
             this.frameType = frameType;
+            this.commandData = new byte[0];
             setDefaultValues();
         }
 
@@ -68,8 +69,8 @@ namespace CoreCommunication
                     RemoteATCommandRequestFrame _frame = new RemoteATCommandRequestFrame();
                     _frame.type = FrameType;
                     _frame.variableDataLength = ATCommandData.Length;
-                    _frame.DestinationAddress16Bit = destinationAddress16Bit;
-                    _frame.DestinationAddress64Bit = destinationAddress64Bit;
+                    _frame.DestinationAddress16Bit = Address16Bit;
+                    _frame.DestinationAddress64Bit = Address64Bit;
                     _frame.CommandOptions = CmdOptions;
                     _frame.ATCommandName = ATCommandName;
                     _frame.ATCommandData = ATCommandData;
@@ -81,7 +82,7 @@ namespace CoreCommunication
                 {
                     ATCommandRequestFrame _frame = new ATCommandRequestFrame();
                     _frame.type = FrameType;
-                    _frame.variableDataLength = ATCommandData == null ? 0 : ATCommandData.Length;
+                    _frame.variableDataLength = ATCommandData.Length;
                     _frame.ATCommandName = ATCommandName;
                     _frame.ATCommandData = ATCommandData;
 
@@ -92,9 +93,23 @@ namespace CoreCommunication
                 {
                     ATCommandResponseFrame _frame = new ATCommandResponseFrame();
                     _frame.type = FrameType;
-                    _frame.variableDataLength = ATCommandData==null ? 0 : ATCommandData.Length;
+                    _frame.variableDataLength = ATCommandData.Length;
                     _frame.ATCommandName = ATCommandName;
                     _frame.ATCommandData = ATCommandData;
+                    _frame.Status = commandStatus;
+
+                    frame = _frame;
+                } break;
+
+                case FrameType.RemoteCommandResponse:
+                {
+                    RemoteATCommandResponseFrame _frame = new RemoteATCommandResponseFrame();
+                    _frame.type = FrameType;
+                    _frame.variableDataLength = ATCommandData.Length;
+                    _frame.ATCommandName = ATCommandName;
+                    _frame.ATCommandData = ATCommandData;
+                    _frame.SourceAddress16Bit = Address16Bit;
+                    _frame.SourceAddress64Bit = Address64Bit;
                     _frame.Status = commandStatus;
 
                     frame = _frame;
@@ -109,23 +124,45 @@ namespace CoreCommunication
 
         public FrameBuilder setDestinationAddress16Bit(UInt16 destinationAddress)
         {
-            destinationAddress16Bit = ByteOperations.littleEndianBytesFromWord(destinationAddress);
+            Address16Bit = ByteOperations.littleEndianBytesFromWord(destinationAddress);
             return this;
         }
         public FrameBuilder setDestinationAddress16Bit(byte[] destinationAddress)
         {
-            destinationAddress16Bit = destinationAddress;
+            Address16Bit = destinationAddress;
             return this;
         }
 
         public FrameBuilder setDestinationAddress64Bit(UInt64 destinationAddress)
         {
-            destinationAddress64Bit = ByteOperations.littleEndianBytesFromLong(destinationAddress);
+            Address64Bit = ByteOperations.littleEndianBytesFromLong(destinationAddress);
             return this;
         }
         public FrameBuilder setDestinationAddress64Bit(byte[] destinationAddress)
         {
-            destinationAddress64Bit = destinationAddress;
+           Address64Bit = destinationAddress;
+            return this;
+        }
+
+        public FrameBuilder setSourceAddress16Bit(UInt16 destinationAddress)
+        {
+            Address16Bit = ByteOperations.littleEndianBytesFromWord(destinationAddress);
+            return this;
+        }
+        public FrameBuilder setSourceAddress16Bit(byte[] destinationAddress)
+        {
+            Address16Bit = destinationAddress;
+            return this;
+        }
+
+        public FrameBuilder setSourceAddress64Bit(UInt64 destinationAddress)
+        {
+            Address64Bit = ByteOperations.littleEndianBytesFromLong(destinationAddress);
+            return this;
+        }
+        public FrameBuilder setSourceAddress64Bit(byte[] destinationAddress)
+        {
+            Address64Bit = destinationAddress;
             return this;
         }
 
@@ -135,7 +172,7 @@ namespace CoreCommunication
             return this;
         }
 
-        public FrameBuilder setATCommandData(byte[] commmandData)
+        public FrameBuilder setATCommandData(byte[] commmandData, int offset = 0, int length = -1)
         {
             this.commandData = commmandData;
             return this;
@@ -193,8 +230,8 @@ namespace CoreCommunication
 
         private void setDestinationAddressDefaultValues()
         {
-            destinationAddress16Bit = new byte[2] { 0xFF, 0xFE };
-            destinationAddress64Bit = new byte[8] { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF };
+            Address16Bit = new byte[2] { 0xFF, 0xFE };
+            Address64Bit = new byte[8] { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF };
         }
     }
 }
