@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <title>Home Services</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <link href="css/bootstrap.min.css" rel="stylesheet" media="screen">
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+        <style>
+            div.horizontal-space {
+                margin-bottom:40px;
+            }
+        </style>
+    </head>
+    <body>
+        <!-- Fixed navbar -->
+        <div class="navbar navbar-inverse navbar-fixed-top">
+            <div class="container">
+                <div class="navbar-header">
+                    <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+                         <span class="icon-bar"></span>
+                         <span class="icon-bar"></span>
+                         <span class="icon-bar"></span>
+                    </button>
+                     <a class="navbar-brand" href="#">Home Services</a>
+                </div>
+                <div class="navbar-collapse collapse">
+                    <ul class="nav navbar-nav">
+                        <li class="active"><a href="#">Sensors</a>
+                        </li>
+                        <li><a href="#security">Security</a>
+                        </li>
+                        <li><a href="#about">About</a>
+                        </li>
+                        <li><a href="#contact">Contact</a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <div class="horizontal-space"></div>
+        
+        <div class="container theme-showcase">
+            <div class="page-header">
+                <h1>Active Sensors</h1>
+            </div>
+
+            <div class="row" id="sensorsDiv">
+                <div class="col-sm-4">
+                    <ul class="list-group">
+                        <li class="list-group-item active">Cras justo odio</li>
+                        <li class="list-group-item">Dapibus ac facilisis in</li>
+                        <li class="list-group-item">Morbi leo risus</li>
+                        <li class="list-group-item">Porta ac consectetur ac</li>
+                        <li class="list-group-item">Vestibulum at eros</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <script src="js/bootstrap.min.js"></script>
+        <script src="js/jquery.csv-0.71.js"></script>
+        <script>
+            $.ajax({
+                url: "sensor_data.csv",
+                async: true,
+                success: function (csvd) {
+                    var data = $.csv.toArrays(csvd);
+                    handleDataDownloadComplete(data);
+                },
+                dataType: "text",
+                complete: function () {
+                    
+                }
+            });
+            
+            function nameForType(type) {
+                var name;
+                switch (type) {
+                    case "type1":
+                        name = "Temperature";
+                        break;
+                    case "type2":
+                        name = "Light";
+                        break;
+                    case "type3":
+                        name = "Switch";
+                        break;
+                }
+                return name;
+            }
+            
+            function handleDataDownloadComplete(data) {
+                var sensors = {};
+                data.forEach(function(d) {
+                    var sensorName = d[0];
+                    if (sensorName in sensors) {
+                        sensors[sensorName][nameForType(d[1])] = d[2];
+                    }
+                    else {
+                        var widgetName = nameForType(d[1]);
+                        sensors[sensorName] = {};
+                        sensors[sensorName][widgetName] = d[2];
+                    }
+                });
+                
+                var sensorsDiv = document.getElementById("sensorsDiv");
+                while (sensorsDiv.firstChild) {
+                    sensorsDiv.removeChild(sensorsDiv.firstChild);
+                }
+                
+                for (var sensor in sensors) {
+                    var colsm4 = document.createElement("div");
+                    colsm4.className = "col-sm-4";
+                    var listgroup = document.createElement("ul");
+                    listgroup.className = "list-group";
+                    sensorsDiv.appendChild(colsm4);
+                    colsm4.appendChild(listgroup);
+                    
+                    var li = document.createElement("li");
+                    li.appendChild(document.createTextNode(sensor));
+                    li.className = "list-group-item active";
+                    listgroup.appendChild(li);
+
+                    for (var key in sensors[sensor]) {
+                        var li = document.createElement("li");
+                        li.appendChild(document.createTextNode(key + " " + sensors[sensor][key]));
+                        li.className = "list-group-item";
+                        listgroup.appendChild(li);
+                    }
+                }
+            }
+        </script>
+    </body>
+</html>
