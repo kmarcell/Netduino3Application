@@ -11,7 +11,8 @@ namespace Netduino3Application
     interface ILocalAccessServiceDataSource
     {
         int NumberOfSensors { get; }
-        string[] SensorInfoAtIndex(int index);
+        int NumberOfWidgetsOfSensor(int sensorIndex);
+        string[] SensorInfoAtIndex(int sensorIndex, int widgetIndex);
     }
 
     class LocalAccessService
@@ -51,49 +52,63 @@ namespace Netduino3Application
 
             NDLogger.Log("HTTP Request received: " + new string (Encoding.UTF8.GetChars(e.Request)) + " File name: " + e.FileName, LogLevel.Verbose);
 
-            try
+            if (e.FileName == "sensor_data.csv")
             {
-                switch (e.FileName)
+                try
                 {
-                    case "index.html":
-                    case @"\SD\index.html":
-                        RespondWithIndexPage();
-                        break;
+                    RespondWithSensorDataFile();
+                }
+                catch (Exception ex)
+                {
+                    HttpService.SendInternalServerError(ex.Message);
                 }
             }
-            catch (Exception ex)
+            else if (e.IsInMemoryCard)
             {
-                HttpService.SendInternalServerError(ex.Message);
+                try
+                {
+                    RespondWithLocalFile(e.FileName);
+                }
+                catch (Exception ex)
+                {
+                    HttpService.SendInternalServerError(ex.Message);
+                }
             }
         }
 
-        void RespondWithIndexPage()
+        private void RespondWithLocalFile(string FileName)
         {
-            SendTemplate("index.template", delegate(string key)
-            {
-                switch (key)
-                {
-                    case "@SLI":
-                        return SensorListInfo();
-                }
-                return "";
-            });
+            HttpService.Send(FileName);
         }
 
-        private string SensorListInfo()
+        private void RespondWithSensorDataFile()
         {
-            string sensorListHTTPAsString = "";
+            WriteSensorDataToFile(@"\SD\\sensor_data.csv");
+            HttpService.Send("sensor_data.csv");
+        }
+
+        private void WriteSensorDataToFile(string FileName)
+        {
+            FileStream OutputFile = new FileStream(FileName, FileMode.Create, FileAccess.Write);
+
             for (int i = 0; i < DataSource.NumberOfSensors; ++i)
             {
-                string listItem = "<li>";
-                foreach (string info in DataSource.SensorInfoAtIndex(i))
+                for (int j = 0; j < DataSource.NumberOfWidgetsOfSensor(i); ++j )
                 {
-                    listItem += info + " ";
+                    string[] sensorData = DataSource.SensorInfoAtIndex(i, j);
+                    string listItem = sensorData[0];
+                    for (int k = 1; k < sensorData.Length; ++k)
+                    {
+                        listItem += "," + sensorData[k];
+                    }
+                    listItem += "\n";
+
+                    byte[] bytes = Encoding.UTF8.GetBytes(listItem);
+                    OutputFile.Write(bytes, 0, bytes.Length);
                 }
-                listItem += "</li>";
-                sensorListHTTPAsString += listItem;
             }
-            return sensorListHTTPAsString;
+
+            OutputFile.Close();
         }
 
         void server_OnServerError(object sender, OnErrorEventArgs e)

@@ -188,9 +188,15 @@ namespace Netduino3Application
             get { return knownDevices.Length; }
         }
 
-        public string[] SensorInfoAtIndex(int index)
+        public int NumberOfWidgetsOfSensor(int sensorIndex)
         {
-            return new string[] { "Sensor name: " + knownDevices[index].SerialNumber, };
+            return knownDevices[sensorIndex].LastUpdateData.Length;
+        }
+
+        public string[] SensorInfoAtIndex(int sensorIndex, int widgetIndex)
+        {
+            Widget widget = knownDevices[sensorIndex].LastUpdateData[widgetIndex];
+            return new string[] { knownDevices[sensorIndex].SerialNumber, "type"+widget.Type, widget.ToString() };
         }
     }
 }

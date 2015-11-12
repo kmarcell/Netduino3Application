@@ -218,7 +218,7 @@ namespace HttpLibrary
         private ServerConfiguration CONFIG;
         private ServerCredentials CREDENTIALS;
         private bool USE_AUTHENTICATION;
-        private enum FileType { JPEG = 1, GIF = 2, Html = 3 };
+        private enum FileType { JPEG = 1, GIF = 2, Html = 3, ICO = 4, CSS = 5, JS = 6 };
         private string HtmlPageHeader = "HTTP/1.0 200 OK\r\nContent-Type: ";
         private string authheader = "HTTP/1.1 401 Authorization Required \nWWW-Authenticate: Basic realm=";
         private string Unauthorized = "<html><body><h1 align=center>" + "401 UNAUTHORIZED ACCESS</h1></body></html>";
@@ -227,7 +227,7 @@ namespace HttpLibrary
         {
             byte[] HEADER;
             long FILE_LENGTH;
-            FILE_STREAM = new FileStream(FileName, FileMode.Open, FileAccess.Read);
+            FILE_STREAM = new FileStream(STORAGE_PATH + "\\" + FileName, FileMode.Open, FileAccess.Read);
             FILE_LENGTH = FILE_STREAM.Length;
 
             switch (Type)
@@ -241,6 +241,18 @@ namespace HttpLibrary
                 case FileType.JPEG:
                     HEADER = UTF8Encoding.UTF8.GetBytes(HtmlPageHeader + "image/jpeg" + "; charset=utf-8\r\nContent-Length: " + FILE_LENGTH.ToString() + "\r\n\r\n");
                     break;
+                case FileType.ICO:
+                    HEADER = UTF8Encoding.UTF8.GetBytes(HtmlPageHeader + "image/ico" + "; charset=utf-8\r\nContent-Length: " + FILE_LENGTH.ToString() + "\r\n\r\n");
+                    break;
+
+                case FileType.CSS:
+                    HEADER = UTF8Encoding.UTF8.GetBytes(HtmlPageHeader + "text/css" + "; charset=utf-8\r\nContent-Length: " + FILE_LENGTH.ToString() + "\r\n\r\n");
+                    break;
+
+                case FileType.JS:
+                    HEADER = UTF8Encoding.UTF8.GetBytes(HtmlPageHeader + "application/x-javascript" + "; charset=utf-8\r\nContent-Length: " + FILE_LENGTH.ToString() + "\r\n\r\n");
+                    break;
+
                 default:
                     HEADER = UTF8Encoding.UTF8.GetBytes(HtmlPageHeader + "text/html" + "; charset=utf-8\r\nContent-Length: " + FILE_LENGTH.ToString() + "\r\n\r\n");
                     break;
@@ -268,49 +280,6 @@ namespace HttpLibrary
         {
             return (Request.IndexOf(Str) >= 0);
         }
-        private void BuildFileList(string[] FILES)
-        {
-            FILE_STREAM = new FileStream(STORAGE_PATH + "\\index.txt", FileMode.Create, FileAccess.Write);
-            FILE_WRITER = new StreamWriter(FILE_STREAM);
-            FILE_WRITER.WriteLine("<html>");
-            FILE_WRITER.WriteLine("<head>");
-            FILE_WRITER.WriteLine("<title>");
-            FILE_WRITER.WriteLine("Index Page");
-            FILE_WRITER.WriteLine("</title>");
-            FILE_WRITER.WriteLine("<body>");
-            FILE_WRITER.WriteLine("<h1 align=center>");
-            FILE_WRITER.WriteLine("FILE LIST");
-            FILE_WRITER.WriteLine("</h1>");
-            FILE_WRITER.WriteLine("<h1 align=center>");
-            FILE_WRITER.WriteLine((FILES.Length - 2).ToString() + " FILES");
-            FILE_WRITER.WriteLine("</h1>");
-            foreach (string F in FILES)
-            {
-                if (!RequestContains(F, "index") && !RequestContains(F, "NotFound"))
-                {
-                    FILE_WRITER.WriteLine("<h1 align=center><a href=\"");
-                    FILE_WRITER.WriteLine("/" + F.Substring(F.LastIndexOf("\\") + 1).ToLower() + "\">");
-                    FILE_WRITER.WriteLine(F.Substring(F.LastIndexOf("\\") + 1).ToLower());
-                    FILE_WRITER.WriteLine("</a>");
-                }
-            }
-            FILE_WRITER.WriteLine("</body>");
-            FILE_WRITER.WriteLine("</html>");
-            FILE_WRITER.Close();
-            FILE_STREAM.Close();
-        }
-        private bool IsFileFound(ref string FILE_NAME, string[] FILES)
-        {
-            foreach (string F in FILES)
-            {
-                if (RequestContains(F.ToLower(), FILE_NAME.ToLower()))
-                {
-                    FILE_NAME = F;
-                    return true;
-                }
-            }
-            return false;
-        }
 
         private string GetFileExtention(string FILE_NAME)
         {
@@ -318,9 +287,14 @@ namespace HttpLibrary
             x = x.Substring(x.LastIndexOf('.') + 1);
             return x;
         }
+
+        private bool isFileExists(string FileName)
+        {
+            return File.Exists(STORAGE_PATH + "\\" + FileName);
+        }
+
         private void ProcessRequest()
         {
-            string[] FILES;
             string REQUEST = "";
             string FILE_NAME = "";
             bool found = false;
@@ -330,9 +304,8 @@ namespace HttpLibrary
                 if (Authenticate(RECEIVE_BUFFER))
                 {
                     REQUEST = new string(UTF8Encoding.UTF8.GetChars(RECEIVE_BUFFER));
-                    FILES = Directory.GetFiles(STORAGE_PATH);
                     FILE_NAME = GetFileName(REQUEST);
-                    found = IsFileFound(ref FILE_NAME, FILES);
+                    found = isFileExists(FILE_NAME);
                     OnRequestReceivedFunction(new OnRequestReceivedArgs(FILE_NAME, found, RECEIVE_BUFFER));
                 }
                 else
@@ -345,9 +318,8 @@ namespace HttpLibrary
             else
             {
                 REQUEST = new string(UTF8Encoding.UTF8.GetChars(RECEIVE_BUFFER));
-                FILES = Directory.GetFiles(STORAGE_PATH);
                 FILE_NAME = GetFileName(REQUEST);
-                found = IsFileFound(ref FILE_NAME, FILES);
+                found = isFileExists(FILE_NAME);
                 OnRequestReceivedFunction(new OnRequestReceivedArgs(FILE_NAME, found, RECEIVE_BUFFER));
             }
             for (int i = 0; i < RECEIVE_BUFFER.Length; i++) RECEIVE_BUFFER[i] = 0;
@@ -378,56 +350,7 @@ namespace HttpLibrary
         {
             return RequestContains(new string(UTF8Encoding.UTF8.GetChars(request)), CREDENTIALS.Key);
         }
-        private void ExecuteRequest()
-        {
-            string[] FILES;
-            string REQUEST = "";
-            string FILE_NAME = "";
-            string FILE_EXTENTION = "";
-            REQUEST = new string(UTF8Encoding.UTF8.GetChars(RECEIVE_BUFFER));
-            FILES = Directory.GetFiles(STORAGE_PATH);
-            FILE_NAME = GetFileName(REQUEST);
-            if (FILE_NAME == "" || RequestContains(FILE_NAME, "index"))
-            {
-                BuildFileList(FILES);
-                FragmentateAndSend(STORAGE_PATH + "\\index.txt", FileType.Html);
-            }
-            else
-            {
-                if (IsFileFound(ref FILE_NAME, FILES))
-                {
-                    FILE_EXTENTION = GetFileExtention(FILE_NAME.ToLower());
-                    switch (FILE_EXTENTION)
-                    {
-                        case "gif":
-                            FragmentateAndSend(FILE_NAME, FileType.GIF);
-                            break;
-                        case "txt":
-                            FragmentateAndSend(FILE_NAME, FileType.Html);
-                            break;
-                        case "jpg":
-                            FragmentateAndSend(FILE_NAME, FileType.JPEG);
-                            break;
-                        case "jpeg":
-                            FragmentateAndSend(FILE_NAME, FileType.JPEG);
-                            break;
-                        case "htm":
-                            FragmentateAndSend(FILE_NAME, FileType.Html);
-                            break;
-                        case "html":
-                            FragmentateAndSend(FILE_NAME, FileType.Html);
-                            break;
-                        default:
-                            FragmentateAndSend(FILE_NAME, FileType.Html);
-                            break;
-                    }
-                }
-                else
-                {
-                    FragmentateAndSend(STORAGE_PATH + "\\NotFound.txt", FileType.Html);
-                }
-            }
-        }
+        
         /// <summary>
         /// 
         /// </summary>
@@ -637,11 +560,20 @@ namespace HttpLibrary
                 case "jpeg":
                     FragmentateAndSend(FileName, FileType.JPEG);
                     break;
+                case "ico":
+                    FragmentateAndSend(FileName, FileType.ICO);
+                    break;
                 case "htm":
                     FragmentateAndSend(FileName, FileType.Html);
                     break;
                 case "html":
                     FragmentateAndSend(FileName, FileType.Html);
+                    break;
+                case "css":
+                    FragmentateAndSend(FileName, FileType.CSS);
+                    break;
+                case "js":
+                    FragmentateAndSend(FileName, FileType.JS);
                     break;
                 default:
                     FragmentateAndSend(FileName, FileType.Html);

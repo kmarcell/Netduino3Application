@@ -32,9 +32,9 @@ namespace XBee
             switch (type)
             {
                 case WidgetType.TemperatureSensor:
-                    return Value + " °C (Celsius)";
+                    return Value.ToString("F") + " °C (Celsius)";
                 case WidgetType.AmbientLightSensor:
-                    return Value + " % (Ambient Light Percent)";
+                    return Value.ToString("F") + " % (Ambient Light Percent)";
                 case WidgetType.Switch:
                     return RawValue > 0 ? "On" : "Off";
                 default:
@@ -109,7 +109,7 @@ namespace XBee
         private byte[] deviceTypeIdentifier;
         private Hashtable pinToWidgetMapping;
 
-        private Widget[] LastUpdateData
+        public Widget[] LastUpdateData
         {
             get
             {
