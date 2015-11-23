@@ -4,7 +4,7 @@ using Microsoft.SPOT;
 
 namespace CoreCommunication
 {
-    class Queue
+    class FrameQueue
     {
         private class FrameWithHandler
         {
@@ -20,7 +20,7 @@ namespace CoreCommunication
             get { return count; }
         }
 
-        public Queue(int capacity = 16)
+        public FrameQueue(int capacity = 16)
         {
             queue = new FrameWithHandler[capacity];
         }

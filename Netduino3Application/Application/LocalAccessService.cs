@@ -20,10 +20,10 @@ namespace Netduino3Application
         private HttpServer httpServer;
         public HttpServer HttpService { get { return httpServer; } }
 
-        public ILocalAccessServiceDataSource DataSource;
+        public ILocalAccessServiceDataSource dataSource;
 
         private static LocalAccessService currentInstance;
-        public static LocalAccessService Current
+        public static LocalAccessService SharedInstance
         {
             get
             {
@@ -35,7 +35,7 @@ namespace Netduino3Application
             }
         }
 
-        public LocalAccessService()
+        private LocalAccessService()
         {
             NetworkInterface NI = NetworkInterface.GetAllNetworkInterfaces()[0];
 
@@ -176,6 +176,18 @@ namespace Netduino3Application
         private char ByteToUTF8Char(int _byte)
         {
             return Encoding.UTF8.GetChars(new byte[] { (byte)_byte })[0];
+        }
+
+        internal ILocalAccessServiceDataSource DataSource
+        {
+            get
+            {
+                return dataSource;
+            }
+            set
+            {
+                dataSource = value;
+            }
         }
     }
 }

@@ -144,13 +144,13 @@ namespace CoreCommunication
             {
                 frame.DigitalSampleData = digitalSampleDataFromBytes(bytes[FRAME_DIGITAL_SAMPLE_BYTE_INDEX], bytes[FRAME_DIGITAL_SAMPLE_BYTE_INDEX + 1]);
 
-                UInt16[] analogSamples = nAnalogSamplesFromBytes(FRAME_ANALOG_SAMPLE_BYTE_INDEX, frame.AnalogChannels.Length, bytes);
+                UInt16[] analogSamples = nAnalogSamplesFromBytes(FRAME_ANALOG_SAMPLE_BYTE_INDEX, frame.AnalogChannels.Length * frame.NumberOfAnalogSamples, bytes);
                 frame.AnalogSampleData = analogSamples;
             }
             else if (frame.AnalogChannels.Length > 0)
             {
                 // If no digital samples are present, analog sample data is at the digital sample index
-                UInt16[] analogSamples = nAnalogSamplesFromBytes(FRAME_DIGITAL_SAMPLE_BYTE_INDEX, frame.AnalogChannels.Length, bytes);
+                UInt16[] analogSamples = nAnalogSamplesFromBytes(FRAME_DIGITAL_SAMPLE_BYTE_INDEX, frame.AnalogChannels.Length * frame.NumberOfAnalogSamples, bytes);
                 frame.AnalogSampleData = analogSamples;
             }
 

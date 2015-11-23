@@ -17,6 +17,18 @@ namespace Netduino3Application
     {
         static IApplication application;
 
+        internal static IApplication Application
+        {
+            get
+            {
+                return application;
+            }
+            set
+            {
+                application = value;
+            }
+        }
+
         public static void Main()
         {
             try
@@ -34,11 +46,11 @@ namespace Netduino3Application
 
         public static void runApplication()
         {
-            application = new Application();
-            application.applicationWillStart();
+            Application = new Application();
+            Application.applicationWillStart();
             waitForNetworkSetUp();
             setupBroadcast();
-            application.didFinishLaunching();
+            Application.didFinishLaunching();
         }
 
         static void waitForNetworkSetUp()

@@ -58,8 +58,8 @@ namespace Netduino3Application
 
             upstreamMQTT = new NDMQTT();
 
-            LocalAccessService.Current.DataSource = this;
-            LocalAccessService.Current.Start();
+            this.LocalAccessService.DataSource = this;
+            this.LocalAccessService.Start();
 
             // setup our interrupt port (on-board button)
             onboardButton = new InterruptPort((Cpu.Pin)0x15, false, Port.ResistorMode.Disabled, Port.InterruptMode.InterruptEdgeHigh);
@@ -197,6 +197,14 @@ namespace Netduino3Application
         {
             Widget widget = knownDevices[sensorIndex].LastUpdateData[widgetIndex];
             return new string[] { knownDevices[sensorIndex].SerialNumber, "type"+widget.Type, widget.ToString() };
+        }
+
+        internal LocalAccessService LocalAccessService
+        {
+            get
+            {
+                return LocalAccessService.SharedInstance;
+            }
         }
     }
 }

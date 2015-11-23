@@ -36,7 +36,7 @@ namespace XBee
 
         private bool HandleNetworkDiscoveryResponse(NetworkDiscoveryResponseFrame frame)
         {
-            if (frame.ATCommandData == null || frame.ATCommandData.Length == 0)
+            if (frame == null || frame.ATCommandData == null || frame.ATCommandData.Length == 0)
             {
                 return true;
             }

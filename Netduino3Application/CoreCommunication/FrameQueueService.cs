@@ -10,15 +10,16 @@ namespace CoreCommunication
     class FrameQueueService
     {
         public static int NOTFOUND = -1;
+        private static int MaxWaitingForResponseNumber = 32;
         public event SendFrameEventHandler SendFrame;
 
-        private Queue waitingForResponseQueue;
-        private Queue waitingForSendingQueue;
+        private FrameQueue waitingForResponseQueue;
+        private FrameQueue waitingForSendingQueue;
 
         public FrameQueueService()
         {
-            waitingForResponseQueue = new Queue();
-            waitingForSendingQueue = new Queue();
+            waitingForResponseQueue = new FrameQueue();
+            waitingForSendingQueue = new FrameQueue();
         }
 
         public void EnqueueFrame(ATCommandFrame frame, Callback callback)
@@ -34,6 +35,16 @@ namespace CoreCommunication
             {
                 frame.FrameID = (byte)frameID;
                 waitingForResponseQueue.Enqueue(frame, callback);
+
+                if (waitingForResponseQueue.Count > MaxWaitingForResponseNumber)
+                {
+                    Callback kickOutcallback = waitingForResponseQueue.CallbackForFrameAtIndex(0);
+                    if (kickOutcallback != null)
+                    {
+                        kickOutcallback(null);
+                    }
+                    waitingForResponseQueue.RemoveAt(0);
+                }
             }
             else
             {
