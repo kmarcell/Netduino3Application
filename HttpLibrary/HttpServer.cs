@@ -615,5 +615,15 @@ namespace HttpLibrary
             Send(bytes);
         }
 
+        public void SendOK()
+        {
+            string emptyBody = "<!DOCTYPE html><meta charset=\"utf-8\"><body></body>";
+            byte[] bytes = Encoding.UTF8.GetBytes(emptyBody);
+            string header = "HTTP/1.0 200 OK\r\nContent-Type: text/html" + "; charset=utf-8\r\nContent-Length: " + bytes.Length + "\r\n\r\n";
+
+            Send(Encoding.UTF8.GetBytes(header));
+            Send(bytes);
+        }
+
     }
 }

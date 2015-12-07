@@ -45,8 +45,6 @@ namespace Netduino3Application
 
         public void didFinishLaunching()
         {
-            // Ehernet didSetup
-            onboardLED.Write(false);
             NetworkInterface NI = NetworkInterface.GetAllNetworkInterfaces()[0];
             NDLogger.Log("Network IP " + NI.IPAddress.ToString(), LogLevel.Verbose);
 
@@ -57,10 +55,17 @@ namespace Netduino3Application
             xbeeCoordinator.StartListen();
 
             upstreamMQTT = new NDMQTT();
-            startMQTT();
+            try
+            {
+                startMQTT();
+            }
+            catch
+            {
+            }
 
             this.LocalAccessService.DataSource = this;
             this.LocalAccessService.Start();
+            this.LocalAccessService.MqttConfigurationReceived += LocalAccessService_MqttConfigurationReceived;
 
             // setup our interrupt port (on-board button)
             onboardButton = new InterruptPort((Cpu.Pin)0x15, false, Port.ResistorMode.Disabled, Port.InterruptMode.InterruptEdgeHigh);
@@ -71,6 +76,15 @@ namespace Netduino3Application
             discoveryService = new XBeeDiscoveryService(xbeeCoordinator);
             discoveryService.RemoteDeviceFound += new RemoteDeviceFoundEventHandler(OnRemoteXBeeFound);
             discoveryService.Discover();
+
+            onboardLED.Write(false);
+        }
+
+        private void LocalAccessService_MqttConfigurationReceived(MqttConfigurationEventArgs e)
+        {
+            Configuration.MQTT = new NDMQTTConfiguration(e.Host, e.UserName, e.Password);
+            Configuration.MQTT.WriteMqttConfigurationToFile(@"\SD\\mqtt_configuration.csv");
+            startMQTT();
         }
 
         void OnRemoteXBeeFound(RemoteDeviceFoundEventArgs e)
@@ -120,20 +134,18 @@ namespace Netduino3Application
 
         void startMQTT()
         {
+            if (Configuration.MQTT == null)
+            {
+                return;
+            }
             int returnCode = upstreamMQTT.Connect(Configuration.MQTT.HostName, Configuration.MQTT.UserName, Configuration.MQTT.Password);
 
             if (returnCode == 0)
             {
                 NDLogger.AddLogger(new MQTTLogger(upstreamMQTT));
                 upstreamMQTT.MqttMsgPublishReceived += new MqttMsgPublishReceivedEventHandler(MqttMsgPublishReceived);
+                upstreamMQTT.SubscribeToEvents(MqttQoS.DeliverAtMostOnce, new String[] { Configuration.MQTT.SensorDataTopic + "/out/#" });
             }
-            else
-            {
-                upstreamMQTT = null;
-                return;
-            }
-
-            upstreamMQTT.SubscribeToEvents(MqttQoS.DeliverAtMostOnce, new String[] { Configuration.MQTT.SensorDataTopic + "/out/#" });
         }
 
         private void MqttMsgPublishReceived(object sender, MqttMsgPublishReceivedEventArgs e)

@@ -4,7 +4,7 @@
         <meta charset="UTF-8">
         <title>Home Services</title>
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <link href="css/bootstrap.min.css" rel="stylesheet" media="screen">
+        <link href="bootstrap.min.css" rel="stylesheet" media="screen">
         <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
         <style>
             div.horizontal-space {
@@ -28,7 +28,7 @@
                     <ul class="nav navbar-nav">
                         <li class="active"><a href="#">Sensors</a>
                         </li>
-                        <li><a href="#security">Security</a>
+                        <li><a href="#mqtt">Mqtt Configuration</a>
                         </li>
                         <li><a href="#about">About</a>
                         </li>
@@ -59,9 +59,60 @@
             </div>
         </div>
         
-        <script src="js/bootstrap.min.js"></script>
-        <script src="js/jquery.csv-0.71.js"></script>
+        <div class="container theme-showcase" id="mqtt">
+            <div class="page-header">
+                <h1>MQTT Configuration</h1>
+            </div>
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    <h3 class="panel-title">Authentication</h3>
+                </div>
+                <div class="panel-body">
+                    <form>
+                    MQTT User Name<br>
+                    <input type="text" name="username" id="username">
+                    <br>
+                    MQTT Password<br>
+                    <input type="password" name="password" id="password">
+                    <br>
+                    MQTT HostName<br>
+                    <input type="text" name="host" id="host">
+                    <br>
+                    <br>
+                    <button type="button" class="btn btn-lg btn-primary" id='saveButton'>Save</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <script src="bootstrap.min.js"></script>
+        <script src="jquery.csv-0.71.js"></script>
         <script>
+            
+            document.getElementById('saveButton').onclick=function() {
+                var username = document.querySelector('input[name="username"]').value;
+                var password = document.querySelector('input[name="password"]').value;
+                var host = document.querySelector('input[name="host"]').value;
+                if (username.length === 0 || password.length === 0)
+                {
+                    return;
+                }
+                
+                $.ajax({
+                    url: "setMqttConfiguration.html",
+                    type: "get",
+                    data: { "username" : username,
+                            "password": password,
+                            "host": host },
+                    success: function () {
+                        $("#saveButton").attr("class", "btn btn-lg btn-success");
+                    },
+                    error: function () {
+                        $("#saveButton").attr("class", "btn btn-lg btn-danger");
+                    }
+                });
+            };
+            
             $.ajax({
                 url: "sensor_data.csv",
                 async: true,
@@ -73,6 +124,34 @@
                 complete: function () {
                     
                 }
+            });
+            
+            $.ajax({
+                url: "mqtt_configuration.csv",
+                async: true,
+                success: function (csvd) {
+                    var data = $.csv.toArray(csvd);
+                    $("#username").val(data[1]);
+                    $("#password").val(data[2]);
+                    $("#host").val(data[0]);
+                }
+            });
+            
+            function mqttConfigurationUnsaved()
+            {
+                $("#saveButton").attr("class", "btn btn-lg btn-primary");
+            }
+            
+            $("#username").on("change keyup paste", function(){
+                mqttConfigurationUnsaved();
+            });
+            
+            $("#password").on("change keyup paste", function(){
+                mqttConfigurationUnsaved();
+            });
+            
+            $("#host").on("change keyup paste", function(){
+                mqttConfigurationUnsaved();
             });
             
             function nameForType(type) {

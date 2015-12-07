@@ -1,5 +1,7 @@
 using System;
+using System.Text;
 using Microsoft.SPOT;
+using System.IO;
 
 namespace NetduinoCore
 {
@@ -26,18 +28,53 @@ namespace NetduinoCore
             get { return RootTopic + "/log"; }
         }
 
-        public static NDMQTTConfiguration DefaultConfiguration
+        public NDMQTTConfiguration(string host, string username, string password)
         {
-            get
-            {
-                NDMQTTConfiguration conf = new NDMQTTConfiguration();
-                conf.UserName = "mkresz";
-                conf.Password = "qwe12ASD";
-                conf.HostName = "ec2-52-29-5-113.eu-central-1.compute.amazonaws.com";
-                conf.HostPort = 1883;
+            HostName = host;
+            UserName = username;
+            Password = password;
+            HostPort = 1883;
+        }
 
-                return conf;
+        public void WriteMqttConfigurationToFile(string FileName)
+        {
+            FileStream OutputFile = new FileStream(FileName, FileMode.Create, FileAccess.Write);
+
+            string host = NDConfiguration.DefaultConfiguration.MQTT.HostName;
+            string username = NDConfiguration.DefaultConfiguration.MQTT.UserName;
+            string password = NDConfiguration.DefaultConfiguration.MQTT.Password;
+
+            string data = host + "," + username + "," + password + "\n";
+            byte[] bytes = Encoding.UTF8.GetBytes(data);
+            OutputFile.Write(bytes, 0, bytes.Length);
+
+            OutputFile.Close();
+        }
+
+        public static NDMQTTConfiguration ReadFromFile(string FileName)
+        {
+            FileStream InputFile;
+            try
+            {
+                InputFile = new FileStream(FileName, FileMode.Open, FileAccess.Read);
+
+                byte[] buffer = new byte[InputFile.Length];
+                int readBytes = 0;
+                while (InputFile.CanRead)
+                {
+                    readBytes += InputFile.Read(buffer, readBytes, 1024);
+                }
+                InputFile.Close();
+
+                string mqttConfig = new string(Encoding.UTF8.GetChars(buffer)).TrimEnd(new char[] {'\n'});
+                string[] split = mqttConfig.Split(new char[] { ',' });
+
+                return new NDMQTTConfiguration(split[0], split[1], split[2]);
             }
+            catch
+            {
+                return null;
+            } 
         }
     }
 
@@ -51,7 +88,6 @@ namespace NetduinoCore
         {
             this.NetbiosName = "NETDUINO";
             this.BroadcastAddress = "192.168.0.255";
-            this.MQTT = NDMQTTConfiguration.DefaultConfiguration;
         }
         private static NDConfiguration instance;
 

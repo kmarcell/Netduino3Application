@@ -1,5 +1,6 @@
 using System;
 using System.Text;
+using Microsoft.SPOT;
 using Microsoft.SPOT.Net.NetworkInformation;
 
 using HttpLibrary;
@@ -15,12 +16,29 @@ namespace Netduino3Application
         string[] SensorInfoAtIndex(int sensorIndex, int widgetIndex);
     }
 
+    public class MqttConfigurationEventArgs : EventArgs
+    {
+        public string Host;
+        public string UserName;
+        public string Password;
+
+        public MqttConfigurationEventArgs(string host, string username, string password)
+        {
+            Host = host;
+            UserName = username;
+            Password = password;
+        }
+    }
+
+    public delegate void MqttConfigurationReceivedHandler(MqttConfigurationEventArgs e);
+
     class LocalAccessService
     {
         private HttpServer httpServer;
         public HttpServer HttpService { get { return httpServer; } }
 
         public ILocalAccessServiceDataSource dataSource;
+        public event MqttConfigurationReceivedHandler MqttConfigurationReceived;
 
         private static LocalAccessService currentInstance;
         public static LocalAccessService SharedInstance
@@ -63,6 +81,17 @@ namespace Netduino3Application
                     HttpService.SendInternalServerError(ex.Message);
                 }
             }
+            else if (e.FileName == "")
+            {
+                try
+                {
+                    RespondWithLocalFile(@"\SD\\index.html");
+                }
+                catch (Exception ex)
+                {
+                    HttpService.SendInternalServerError(ex.Message);
+                }
+            }
             else if (e.IsInMemoryCard)
             {
                 try
@@ -73,6 +102,39 @@ namespace Netduino3Application
                 {
                     HttpService.SendInternalServerError(ex.Message);
                 }
+            }
+            else if (e.FileName.IndexOf("setMqttConfiguration.html") > -1)
+            {
+                string fileName, username, password, host;
+                string[] split = e.FileName.Split(new char[] { '?' });
+                fileName = split[0];
+                string[] parameters = split[1].Split(new char[] { '&' });
+                username = parameters[0].Split(new char[] { '=' })[1];
+                password = parameters[1].Split(new char[] { '=' })[1];
+                host     = parameters[2].Split(new char[] { '=' })[1];
+
+                onMqttConfigurationReceived(host, username, password);
+                HttpService.SendOK();
+            }
+            else if (e.FileName.IndexOf("mqtt_configuration.csv") > -1)
+            {
+                try
+                {
+                    RespondWithMqttConfigurationFile();
+                }
+                catch (Exception ex)
+                {
+                    HttpService.SendInternalServerError(ex.Message);
+                }
+            }
+        }
+
+        private void onMqttConfigurationReceived(string host, string username, string password)
+        {
+            MqttConfigurationReceivedHandler handler = MqttConfigurationReceived;
+            if (handler != null)
+            {
+                handler(new MqttConfigurationEventArgs(host, username, password));
             }
         }
 
@@ -109,6 +171,20 @@ namespace Netduino3Application
             }
 
             OutputFile.Close();
+        }
+
+        private void RespondWithMqttConfigurationFile()
+        {
+            if (NDConfiguration.DefaultConfiguration.MQTT != null)
+            {
+                NDConfiguration.DefaultConfiguration.MQTT.WriteMqttConfigurationToFile(@"\SD\\mqtt_configuration.csv");
+            }
+            else
+            {
+                FileStream OutputFile = new FileStream(@"\SD\\mqtt_configuration.csv", FileMode.Create, FileAccess.Write);
+                OutputFile.Close();
+            }
+            HttpService.Send("mqtt_configuration.csv");
         }
 
         void server_OnServerError(object sender, OnErrorEventArgs e)
