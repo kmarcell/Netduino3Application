@@ -57,6 +57,7 @@ namespace Netduino3Application
             upstreamMQTT = new NDMQTT();
             try
             {
+                Configuration.MQTT = NDMQTTConfiguration.ReadFromFile(@"\SD\\mqtt_configuration.csv");
                 startMQTT();
             }
             catch

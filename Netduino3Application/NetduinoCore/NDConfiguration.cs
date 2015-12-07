@@ -67,9 +67,15 @@ namespace NetduinoCore
                 InputFile.Close();
 
                 string mqttConfig = new string(Encoding.UTF8.GetChars(buffer)).TrimEnd(new char[] {'\n'});
-                string[] split = mqttConfig.Split(new char[] { ',' });
-
-                return new NDMQTTConfiguration(split[0], split[1], split[2]);
+                if (mqttConfig.Length > 0)
+                {
+                    string[] split = mqttConfig.Split(new char[] { ',' });
+                    return new NDMQTTConfiguration(split[0], split[1], split[2]);
+                }
+                else
+                {
+                    return null;
+                }
             }
             catch
             {
