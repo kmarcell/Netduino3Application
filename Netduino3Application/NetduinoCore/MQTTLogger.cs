@@ -1,4 +1,5 @@
 using System;
+using System.Threading;
 using Microsoft.SPOT;
 using CloudLib;
 
@@ -21,7 +22,10 @@ namespace NetduinoCore
                 CLEvent e = new CLEvent((int)CLEventType.LogMessage, message);
                 try
                 {
-                    platform.PostEvent(e);
+                    new Thread(delegate
+                    {
+                        platform.PostEvent(e);
+                    });
                 }
                 catch
                 {
