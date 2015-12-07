@@ -25,20 +25,20 @@ namespace CoreCommunication
             buffer = tmp_buffer;
         }
 
-        public void RemoveFirstNBytes(int N)
+        public void RemoveFirstNBytes(uint N)
         {
             if (N > buffer.Length)
             {
-                N = buffer.Length;
+                N = (uint)buffer.Length;
             }
 
-            if (N <= 0)
+            if (N == 0)
             {
                 return;
             }
 
             byte[] tmp_buffer = new byte[buffer.Length - N];
-            Array.Copy(buffer, N, tmp_buffer, 0, tmp_buffer.Length);
+            Array.Copy(buffer, (int)N, tmp_buffer, 0, tmp_buffer.Length);
             buffer = tmp_buffer;
         }
 

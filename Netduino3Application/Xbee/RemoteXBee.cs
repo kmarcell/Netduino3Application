@@ -51,7 +51,7 @@ namespace XBee
                     case WidgetType.TemperatureSensor:
                         return ((RawValue / 1023.0 * 3.3) - 0.5) * 100.0;
                     case WidgetType.AmbientLightSensor:
-                        return (RawValue / 1023.0) * 100.0;
+                        return (1.0 - (RawValue / 1023.0)) * 100.0;
                     case WidgetType.Switch:
                         return RawValue;
                 }
@@ -131,6 +131,45 @@ namespace XBee
             this.Identifier = Identifier;
         }
 
+        public void setValueOfWidgetWithType(double value, WidgetType widgetType)
+        {
+            Widget widget = null;
+            int xbeePin = -1;
+            foreach (int pin in pinToWidgetMapping.Keys)
+            {
+                widget = (Widget)pinToWidgetMapping[pin];
+                if (widget.Type == widgetType)
+                {
+                    xbeePin = pin;
+                    break;
+                }
+            }
+
+            if (xbeePin > -1)
+            {
+                string command;
+                byte[] commandData;
+                switch (widgetType)
+                {
+                    case WidgetType.Switch:
+                        command = "D" + xbeePin;
+                        commandData = new byte[] { value > 0 ? (byte)0x05 : (byte)0x04};
+                        break;
+                    default:
+                        return;
+                }
+
+                RemoteATCommandRequestFrame frame = FrameBuilder.RemoteATCommandRequest
+                                .setATCommandName(command)
+                                .setATCommandData(commandData)
+                                .setDestinationAddress64Bit(this.SourceAddress64Bit)
+                                .setDestinationAddress16Bit(this.SourceAddress16Bit)
+                                .Build() as RemoteATCommandRequestFrame;
+
+                coordinator.EnqueueFrame(frame, null);
+            }
+        }
+
         private void ReceivedRemoteFrameHandler(object sender, Frame frame)
         {
             if (!(frame is DigitalAnalogSampleFrame) ||
@@ -158,7 +197,7 @@ namespace XBee
                 Widget w = (Widget)pinToWidgetMapping[pin];
                 if (w != null)
                 {
-                    w.RawValue = sample.DigitalSampleData[i];
+                    w.RawValue = sample.DigitalSampleData[pin];
                 }
             }
 

@@ -22,7 +22,8 @@ namespace NetduinoCore
             {
                 case (int)CLEventType.TemperatureReading:
                 case (int)CLEventType.AmbientLightReading:
-                    topic = NDConfiguration.DefaultConfiguration.MQTT.SensorDataTopic + "/" + clEvent.SourceIdentifier;
+                case (int)CLEventType.SwitchStateChange:
+                    topic = NDConfiguration.DefaultConfiguration.MQTT.SensorDataTopic + "/in/" + clEvent.SourceIdentifier + "/" + (int)clEvent.EventType;
                     break;
 
                 case (int)CLEventType.LogMessage:

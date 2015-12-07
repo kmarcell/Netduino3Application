@@ -75,13 +75,35 @@ namespace CoreCommunication
 
         public byte[] SourceAddress16Bit
         {
-            get { return Address16Bit; }
+            get
+            {
+                if (Address16Bit != null)
+                {
+                    return Address16Bit;
+                }
+                else
+                {
+                    return new byte[] {0xFF, 0xFF};
+                }
+                
+            }
             set { Address16Bit = value; }
         }
 
         public byte[] SourceAddress64Bit
         {
-            get { return Address64Bit; }
+            get
+            {
+                if (Address64Bit != null)
+                {
+                    return Address64Bit;
+                }
+                else
+                {
+                    return new byte[8] {0, 0, 0, 0, 0, 0, 0xFF, 0xFE};
+                }
+                
+            }
             set { Address64Bit = value; }
         }
     }

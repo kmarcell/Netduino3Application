@@ -57,6 +57,7 @@ namespace Netduino3Application
             xbeeCoordinator.StartListen();
 
             upstreamMQTT = new NDMQTT();
+            startMQTT();
 
             this.LocalAccessService.DataSource = this;
             this.LocalAccessService.Start();
@@ -132,12 +133,40 @@ namespace Netduino3Application
                 return;
             }
 
-            upstreamMQTT.SubscribeToEvents(MqttQoS.DeliverAtMostOnce, new String[] { Configuration.MQTT.SensorDataTopic });
+            upstreamMQTT.SubscribeToEvents(MqttQoS.DeliverAtMostOnce, new String[] { Configuration.MQTT.SensorDataTopic + "/out/#" });
         }
 
         private void MqttMsgPublishReceived(object sender, MqttMsgPublishReceivedEventArgs e)
         {
+            string[] parts = e.Topic.Split(new char[] { '/' });
+            string serialNumber = parts[parts.Length - 2];
 
+            RemoteXBee xbee = xbeeWithSerialNumber(serialNumber);
+            if (xbee == null)
+            {
+                return;
+            }
+
+            int eventType = Int32.Parse(parts[parts.Length - 1]);
+            WidgetType wType;
+
+            switch (eventType)
+            {
+                case (int)CLEventType.TemperatureReading:
+                    wType = WidgetType.TemperatureSensor;
+                    break;
+                case (int)CLEventType.AmbientLightReading:
+                    wType = WidgetType.AmbientLightSensor;
+                    break;
+                case (int)CLEventType.SwitchStateChange:
+                    wType = WidgetType.Switch;
+                    break;
+                default:
+                    return;
+            }
+
+            double value = Double.Parse(e.Message);
+            xbee.setValueOfWidgetWithType(value, wType);
         }
 
         public NDConfiguration Configuration
@@ -156,8 +185,30 @@ namespace Netduino3Application
                         CLEvent e = new CLEvent((int)CLEventType.TemperatureReading, widget.Value, xbee.SerialNumber);
                         upstreamMQTT.PostEvent(e);
                     }
+                    if (widget.Type == WidgetType.AmbientLightSensor)
+                    {
+                        CLEvent e = new CLEvent((int)CLEventType.AmbientLightReading, widget.Value, xbee.SerialNumber);
+                        upstreamMQTT.PostEvent(e);
+                    }
+                    if (widget.Type == WidgetType.Switch)
+                    {
+                        CLEvent e = new CLEvent((int)CLEventType.SwitchStateChange, widget.Value/*widget.Value > 0 ? "on" : "off"*/, xbee.SerialNumber);
+                        upstreamMQTT.PostEvent(e);
+                    }
                 }
             }
+        }
+
+        RemoteXBee xbeeWithSerialNumber(string serialNumber)
+        {
+            foreach (RemoteXBee xbee in knownDevices)
+            {
+                if (xbee.SerialNumber == serialNumber)
+                {
+                    return xbee;
+                }
+            }
+            return null;
         }
 
         void FrameDroppedByChecksumHandler(object sender, FrameDroppedByChecksumEventArgs e)

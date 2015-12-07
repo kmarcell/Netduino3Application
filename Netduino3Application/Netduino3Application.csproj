@@ -54,9 +54,9 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Application\Program.cs" />
     <Compile Include="CoreCommunication\FrameBuilder.cs" />
-    <Compile Include="Xbee\RemoteXBee.cs" />
-    <Compile Include="Xbee\XBeeCoordinator.cs" />
-    <Compile Include="Xbee\XBeeDiscoveryService.cs" />
+    <Compile Include="XBee\RemoteXBee.cs" />
+    <Compile Include="XBee\XBeeCoordinator.cs" />
+    <Compile Include="XBee\XBeeDiscoveryService.cs" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="M2Mqtt.NetMf, Version=4.2.0.0, Culture=neutral, processorArchitecture=MSIL">

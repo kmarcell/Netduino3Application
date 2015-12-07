@@ -121,18 +121,19 @@ namespace XBee
                 rx_buffer.AddBytes(bytes);
 
                 // Slice and Parse frames
-                int index = 0;
-                byte[] rawFrame = FrameSlicer.nextFrameFromBuffer(rx_buffer.RawBytes, index);
+                uint offset = 0;
+                uint endIndex = 0;
+                byte[] rawFrame = FrameSlicer.nextFrameFromBuffer(rx_buffer.RawBytes, offset, out endIndex);
                 while (rawFrame.Length > 0)
                 {
                     handleRawFrameRead(rawFrame);
 
-                    index += rawFrame.Length;
-                    rawFrame = FrameSlicer.nextFrameFromBuffer(rx_buffer.RawBytes, index);
+                    offset = endIndex;
+                    rawFrame = FrameSlicer.nextFrameFromBuffer(rx_buffer.RawBytes, offset, out endIndex);
                 }
 
                 // Save partial last Frame
-                rx_buffer.RemoveFirstNBytes(index);
+                rx_buffer.RemoveFirstNBytes(endIndex);
             }
         }
 

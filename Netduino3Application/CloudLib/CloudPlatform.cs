@@ -7,6 +7,7 @@ namespace CloudLib
     {
         TemperatureReading,
         AmbientLightReading,
+        SwitchStateChange,
         LogMessage,
     }
 
@@ -22,10 +23,11 @@ namespace CloudLib
         private string eventMessage;
         public string SourceIdentifier;
 
-        public CLEvent(int eventType, string eventMessage)
+        public CLEvent(int eventType, string eventMessage, string sourceIdentifier = "")
         {
             this.eventType = eventType;
             this.eventMessage = eventMessage;
+            this.SourceIdentifier = sourceIdentifier;
         }
 
         public CLEvent(int eventType, double eventValue, string sourceIdentifier = "")
